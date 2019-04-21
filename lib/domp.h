@@ -18,36 +18,34 @@ namespace domp {
   enum DOMP_TYPE {DOMP_INT, DOMP_FLOAT};
   enum DOMP_REDUCE_OP {DOMP_ADD, DOMP_SUBTRACT};
 
-
   class DOMP;
   class Variable;
   class Interval;
 
-DOMP *domp;
+DOMP *dompObject;
 
 #define DOMP_INIT(argc, argv) { \
-  domp = new DOMP(argc, argv); \
+  dompObject = new DOMP(argc, argv); \
 }
-#define DOMP_REGISTER(var, type) ( \
-  domp->Register(#var, var, type); \
-)
+#define DOMP_REGISTER(var, type) { \
+  dompObject->Register(#var, var, type); \
+}
 #define DOMP_PARALLELIZE(var, offset, size) { \
-  domp->Parallelize(var, offset, size); \
+  dompObject->Parallelize(var, offset, size); \
 }
 #define DOMP_SHARED(var, offset, size) { \
-  domp->Shared(var, offset, size); \
+  dompObject->Shared(#var, offset, size); \
 }
-#define DOMP_SYNC { \
-  domp->Synchronize(); \
-};
+#define DOMP_SYNC { dompObject->Synchronize(); }
+
 #define DOMP_REDUCE(var, type, op) { \
-  domp->Reduce(#var, (void*)&var, type, op); \
+  dompObject->Reduce(#var, (void*)&(var), type, op); \
 }
 #define DOMP_FINALIZE() { \
-  delete(domp);\
-}
+  delete(dompObject); \
 }
 
+}
 
 class domp::DOMP{
   int rank;
@@ -80,39 +78,5 @@ class domp::Interval {
 class domp::Variable {
 
 };
-
-//typedef struct domp_interval {
-//  int start;
-//  int size;
-//  int nodeId;
-//} domp_interval_t;
-//
-//typedef struct domp_var {
-//  void *ptr;
-//  List intervals;
-//} domp_var_t;
-//
-//typedef struct domp_struct{
-//  int rank;
-//  int clusterSize;
-//  List var_list;
-//} domp_t;
-
-
-
-void domp_error() {
-
-}
-
-//bool DOMP_init(domp_t *dompObject, int *argc, char ***argv);
-//
-//void DOMP_parallelize(domp_t *dompObject, int totalSize, int *offset, int *size);
-//
-//void DOMP_firstShared(domp_t *dompObject, enum DOMP_TYPE type, void *location, int offset, int size);
-//
-//void DOMP_shared(domp_t *dompObject, enum DOMP_TYPE type, void *location, int offset, int size);
-//
-//
-//void DOMP_reduce(domp_t *dompObject, int tag, int *sum, int value);
 
 #endif //DOMP_DOMP_H

@@ -39,6 +39,22 @@ void DOMP::Parallelize(int totalSize, int *offset, int *size) {
 void DOMP::FirstShared(std::string varName, int offset, int size) {
 }
 
+void DOMP::Register(std::string varName, void* varValue, DOMP_TYPE type) {
+
+}
+
+void DOMP::Shared(std::string varName, int offset, int size) {
+
+}
+
+int DOMP::Reduce(std::string varName, void *address, DOMP_TYPE type, DOMP_REDUCE_OP op) {
+  return 0;
+}
+
+void DOMP::Synchronize() {
+
+}
+
 }
 
 //bool DOMP_init(domp_t *dompObject, int *argc, char ***argv) {
