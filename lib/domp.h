@@ -5,17 +5,22 @@
 #ifndef DOMP_DOMP_H
 #define DOMP_DOMP_H
 
+#include <stdbool.h>
 
 typedef struct domp_struct{
-  int nodeId;
-  int cluserSize;
+  int rank;
+  int clusterSize;
 
 } domp_t;
 
 
+void domp_error() {
+
+}
+
 enum DOMP_TYPE{DOMP_INT, DOMP_FLOAT};
 
-void DOMP_init(domp_t *dompObject, char **argc, int argv);
+bool DOMP_init(domp_t *dompObject, int *argc, char ***argv);
 
 void DOMP_parallelize(domp_t *dompObject, int totalSize, int *offset, int *size);
 
