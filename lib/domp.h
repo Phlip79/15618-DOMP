@@ -22,29 +22,29 @@ namespace domp {
   class Variable;
   class Interval;
 
-DOMP *dompObject;
+  DOMP *dompObject;
 
-#define DOMP_INIT(argc, argv) { \
-  dompObject = new DOMP(argc, argv); \
-}
-#define DOMP_REGISTER(var, type) { \
-  dompObject->Register(#var, var, type); \
-}
-#define DOMP_PARALLELIZE(var, offset, size) { \
-  dompObject->Parallelize(var, offset, size); \
-}
-#define DOMP_SHARED(var, offset, size) { \
-  dompObject->Shared(#var, offset, size); \
-}
-#define DOMP_SYNC { dompObject->Synchronize(); }
+  #define DOMP_INIT(argc, argv) { \
+    dompObject = new DOMP(argc, argv); \
+  }
+  #define DOMP_REGISTER(var, type) { \
+    dompObject->Register(#var, var, type); \
+  }
+  #define DOMP_PARALLELIZE(var, offset, size) { \
+    dompObject->Parallelize(var, offset, size); \
+  }
+  #define DOMP_SHARED(var, offset, size) { \
+    dompObject->Shared(#var, offset, size); \
+  }
+  #define DOMP_SYNC { dompObject->Synchronize(); }
 
-#define DOMP_REDUCE(var, type, op) { \
-  dompObject->Reduce(#var, (void*)&(var), type, op); \
-}
-#define DOMP_FINALIZE() { \
-  delete(dompObject); \
-}
-
+  #define DOMP_REDUCE(var, type, op) { \
+    dompObject->Reduce(#var, (void*)&(var), type, op); \
+  }
+  #define DOMP_FINALIZE() { \
+    delete(dompObject); \
+    dompObject = NULL; \
+  }
 }
 
 class domp::DOMP{
