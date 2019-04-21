@@ -1,8 +1,7 @@
-CC=gcc
+CC=g++
 
-MPI=-DMPI
-MPI+=-DDEBUG_DOMP
-MPICC = mpicc
+MPI =-DDEBUG_DOMP
+MPICC = mpic++
 
 
 DEBUG=0
@@ -10,7 +9,7 @@ CFLAGS=-c -g -O3 -Wall -DDEBUG=$(DEBUG)
 #LDFLAGS= -lm
 DDIR = ./data
 
-CFILES = domp.c util/linkedlist.c
+CFILES = domp.cpp util/linkedlist.cpp
 HFILES = domp.h util/linkedlist.h
 
 all: domp
