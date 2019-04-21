@@ -6,12 +6,25 @@
 #define DOMP_DOMP_H
 
 #include <stdbool.h>
+#include "util/linkedlist.h"
+
+typedef struct domp_interval {
+  int start;
+  int location;
+  int nodeId;
+} domp_interval_t;
+
+typedef struct domp_var {
+  void *ptr;
+  List intervals;
+} domp_var_t;
 
 typedef struct domp_struct{
   int rank;
   int clusterSize;
-
+  List var_list;
 } domp_t;
+
 
 
 void domp_error() {

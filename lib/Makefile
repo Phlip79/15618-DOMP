@@ -10,14 +10,14 @@ CFLAGS=-c -g -O3 -Wall -DDEBUG=$(DEBUG)
 #LDFLAGS= -lm
 DDIR = ./data
 
-CFILES = domp.c
-HFILES = domp.h
+CFILES = domp.c util/linkedlist.c
+HFILES = domp.h util/linkedlist.h
 
 all: domp
 
 domp: $(CFILES) $(HFILES)
-	$(MPICC) $(CFLAGS) $(MPI) -o domp.o $(CFILES)
+	$(MPICC) $(CFLAGS) $(MPI) $(CFILES)
 
 clean:
-	rm -f domp.o
+	rm -f *.o
 
