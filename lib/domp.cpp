@@ -15,6 +15,10 @@ DOMP::DOMP(int *argc, char ***argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 }
 
+DOMP::~DOMP() {
+  MPI_Finalize();
+}
+
 void DOMP::Parallelize(int totalSize, int *offset, int *size) {
   int perNode = totalSize / clusterSize;
   int startOffset = perNode * rank;
@@ -32,7 +36,7 @@ void DOMP::Parallelize(int totalSize, int *offset, int *size) {
   *size = perNode;
 }
 
-void DOMP::FirstShared(void *ptr, int offset, int size) {
+void DOMP::FirstShared(std::string varName, int offset, int size) {
 }
 
 }

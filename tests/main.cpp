@@ -24,13 +24,16 @@ void compute(int total_size) {
     sum += arr[i];
   }
 
-  DOMP_REDUCE(sum, +);
+  DOMP_REDUCE(sum, DOMP_INT, DOMP_ADD);
 }
 
-int main(int argv, char **argc) {
-  DOMP_INIT(argv, argc);
+int main(int argc, char **argv) {
+  DOMP_INIT(&argc, &argv);
+  compute(200000);
 
   std::cout<<"Hello world"<<std::endl;
+
+  DOMP_FINALIZE()
   return 0;
 }
 
