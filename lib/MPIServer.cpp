@@ -29,7 +29,15 @@ namespace domp {
     MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, *client, &status);
     if (status.MPI_ERROR == MPI_SUCCESS) {
       switch (status.MPI_TAG) {
-        case MPI_MAP_REQ:break;
+        case MPI_MAP_REQ:
+          if (rank != 0) {
+            std::cout<<"ERROR::Node "<<rank<<" received map request"<<std::endl;
+            // TODO: Please see if we should respond with an error message
+          }
+          else {
+            handleMapRequest(status, client);
+          }
+          break;
         case MPI_MAP_RESP:break;
         case MPI_DATA_CMD:break;
         default:
@@ -71,5 +79,27 @@ namespace domp {
 
     // Send the MAP request to Master node
     MPI_Send(buffer, size, MPI_BYTE, 0, MPI_MAP_REQ, MPI_COMM_WORLD);
+  }
+
+
+  void MPIMasterServer::handleMapRequest(MPI_Status status, MPI_Comm *client) {
+    if (status.MPI_ERROR == MPI_SUCCESS) {
+      int count;
+      MPI_Get_count(&status, MPI_BYTE, &count);
+      char *buffer = new char[count];
+      MPI_Recv(buffer, count, MPI_BYTE, status.MPI_SOURCE, status.MPI_TAG, *client, NULL);
+      commands_received.push_back(std::make_pair(status.MPI_SOURCE,(DOMPMapCommand_t*)buffer));
+
+      mtx.lock();
+      if (mapReceived == (size - 1)) {
+        // Respond to all slaves
+        mtx.unlock();
+
+
+      } else {
+        mapReceived ++;
+        mtx.unlock();
+      }
+    }
   }
 }

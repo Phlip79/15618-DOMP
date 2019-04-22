@@ -7,6 +7,8 @@
 
 #include <iostream>
 #include <list>
+#include <mutex>
+#include <utility>
 #include <mpi.h>
 
 using namespace std;
@@ -15,6 +17,7 @@ namespace domp {
 #define DOMP_MAX_VAR_NAME (50)
 
   class MPIServer;
+  class MPIMasterServer;
   enum MPIServerTag {MPI_MAP_REQ= 0, MPI_MAP_RESP, MPI_DATA_CMD};
   enum MPIAccessType {MPI_SHARED_FETCH= 0, MPI_EXCLUSIVE_FETCH, MPI_SHARED_FIRST, MPI_EXCLUSIVE_FIRST};
 
@@ -35,6 +38,7 @@ namespace domp {
 
 
 class domp::MPIServer {
+ protected:
   int size;
   int rank;
   char name[20];
@@ -59,7 +63,18 @@ class domp::MPIServer {
   void requestData(std::string varName, int start, int size, MPIAccessType accessType);
 
   void triggerMap();
+  void handleMapRequest(MPI_Status status, MPI_Comm *client){}
 
 };
 
+
+ class domp::MPIMasterServer : protected domp::MPIServer{
+  int mapReceived;
+  std::mutex mtx;
+  std::list<std::pair<int,DOMPMapCommand_t*>> commands_received;
+  MPIMasterServer(std::string name, int size, int rank) :MPIServer(std::move(name), size, rank){
+    mapReceived = 0;
+  };
+  void handleMapRequest(MPI_Status status, MPI_Comm *client);
+};
 #endif //DOMP_MPISERVER_H

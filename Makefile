@@ -1,7 +1,7 @@
 DEBUG=0
 CC=mpic++
 OMP=-fopenmp -msse4.2 -msse2 -msse3
-CFLAGS=-g -O3 -Wall -DDEBUG=$(DEBUG)
+CFLAGS=-g -O3 -Wall -DDEBUG=$(DEBUG) -std=c++11
 LDFLAGS= -lm
 
 all: domp arraySum

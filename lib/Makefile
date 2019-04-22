@@ -5,7 +5,7 @@ MPICC = mpic++
 
 
 DEBUG=0
-CFLAGS=-c -g -O3 -Wall -DDEBUG=$(DEBUG)
+CFLAGS=-c -g -O3 -Wall -DDEBUG=$(DEBUG) -std=c++11
 #LDFLAGS= -lm
 DDIR = ./data
 
