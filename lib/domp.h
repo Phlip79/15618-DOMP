@@ -22,7 +22,7 @@ namespace domp {
   class Variable;
   class Interval;
 
-  DOMP *dompObject;
+  extern DOMP *dompObject;
 
   #define DOMP_INIT(argc, argv) { \
     dompObject = new DOMP(argc, argv); \

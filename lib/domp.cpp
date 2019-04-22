@@ -19,6 +19,8 @@ DOMP::~DOMP() {
   MPI_Finalize();
 }
 
+DOMP *dompObject;
+
 void DOMP::Parallelize(int totalSize, int *offset, int *size) {
   int perNode = totalSize / clusterSize;
   int startOffset = perNode * rank;
