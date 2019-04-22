@@ -11,6 +11,8 @@
 namespace domp {
 DOMP::DOMP(int *argc, char ***argv) {
   MPI_Init(argc, argv);
+  clusterSize = 1;
+  rank = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &clusterSize);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 }
@@ -47,6 +49,10 @@ void DOMP::Register(std::string varName, void* varValue, DOMP_TYPE type) {
 
 void DOMP::Shared(std::string varName, int offset, int size) {
 
+}
+
+void DOMP::Exclusive(std::string varName, int offset, int size) {
+  
 }
 
 int DOMP::Reduce(std::string varName, void *address, DOMP_TYPE type, DOMP_REDUCE_OP op) {

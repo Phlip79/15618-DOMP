@@ -36,6 +36,11 @@ namespace domp {
   #define DOMP_SHARED(var, offset, size) { \
     dompObject->Shared(#var, offset, size); \
   }
+
+  #define DOMP_EXCLUSIVE(var, offset, size) { \
+    dompObject->Exclusive(#var, offset, size); \
+  }
+
   #define DOMP_SYNC { dompObject->Synchronize(); }
 
   #define DOMP_REDUCE(var, type, op) { \
@@ -58,6 +63,7 @@ class domp::DOMP{
   void Parallelize(int totalSize, int *offset, int *size);
   void FirstShared(std::string varName, int offset, int size);
   void Shared(std::string varName, int offset, int size);
+  void Exclusive(std::string varName, int offset, int size);
   int Reduce(std::string varName, void *address, DOMP_TYPE type, DOMP_REDUCE_OP op);
   void Synchronize();
 };

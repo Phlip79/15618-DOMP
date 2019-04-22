@@ -17,16 +17,21 @@ int compute(int total_size) {
   DOMP_REGISTER(arr, DOMP_INT);
   DOMP_PARALLELIZE(total_size, &offset, &size);
 
-  DOMP_SHARED(arr, offset, size);
+  DOMP_EXCLUSIVE(arr, offset, size);
   DOMP_SYNC;
-
   int sum = 0;
+  std::cout<<"Offset is "<<offset<<", size is "<<size<<"\n";
+
 #pragma omp parallel
+{
+#pragma omp for
+  for(i=offset; i < (offset + size); i++)
+    arr[i] = i;
 #pragma omp for reduction(+ : sum)
   for(i=offset; i < (offset + size); i++) {
     sum += arr[i];
   }
-
+}
   DOMP_REDUCE(sum, DOMP_INT, DOMP_ADD);
 
   return sum;
@@ -34,7 +39,7 @@ int compute(int total_size) {
 
 int main(int argc, char **argv) {
   DOMP_INIT(&argc, &argv);
-  int sum = compute(200000);
+  int sum = compute(200);
 
   std::cout<<"Hello the total sum is "<<sum<<std::endl;
 

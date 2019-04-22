@@ -6,7 +6,6 @@ LDFLAGS= -lm
 
 all: domp arraySum
 
-
 domp: lib/domp.o
 	(cd lib; make)
 
