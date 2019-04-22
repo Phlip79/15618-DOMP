@@ -10,11 +10,14 @@
 #include <mutex>
 #include <utility>
 #include <mpi.h>
+#include <map>
+#include <thread>
+#include "domp.h"
 
 using namespace std;
 
 namespace domp {
-#define DOMP_MAX_VAR_NAME (50)
+#define DOMP_MIN_DATA_TAG (100)
 
   class MPIServer;
   class MPIMasterServer;
@@ -22,10 +25,11 @@ namespace domp {
   enum MPIAccessType {MPI_SHARED_FETCH= 0, MPI_EXCLUSIVE_FETCH, MPI_SHARED_FIRST, MPI_EXCLUSIVE_FIRST};
 
   typedef struct DOMPMapCommand {
-    char varName[DOMP_MAX_VAR_NAME];
+    std::string varName;
     int start;
     int size;
     MPIAccessType accessType;
+    int nodeId;
   } DOMPMapCommand_t;
 
   typedef struct DOMPMapRequest {
@@ -41,38 +45,45 @@ class domp::MPIServer {
  protected:
   int size;
   int rank;
-  char name[20];
+  char clusterName[DOMP_MAX_CLUSTER_NAME];
   char port_name[MPI_MAX_PORT_NAME];
+  std::thread serverThread;
+  MPI_Comm *nodeConnections;
   void accept();
   void handleRequest(MPI_Comm *client);
   DOMPMapRequest_t *mapRequest;
+  std::map <int, DOMPMapCommand*> dataRequests;
+  DOMP *dompObject;
+
  public:
-  MPIServer(std::string name, int size, int rank) {
-    int len = name.copy(this->name, 19, 0);
-    this->name[len] = '\0';
+  MPIServer(DOMP *dompObject, char* clusterName, int size, int rank) {
+    this->dompObject = dompObject;
+    strncpy(this->clusterName, clusterName, DOMP_MAX_CLUSTER_NAME);
     this->size = size;
     this->rank = rank;
     this->mapRequest = new DOMPMapRequest_t();
+    nodeConnections = new MPI_Comm[this->rank];
   }
   ~MPIServer();
 
 
-  bool startServer();
-  bool stopServer();
+  void startServer();
+  void stopServer();
 
   void requestData(std::string varName, int start, int size, MPIAccessType accessType);
 
   void triggerMap();
+  void transferData(MPI_Status status, MPI_Comm *client);
+  void handleMapResponse(MPI_Status status, MPI_Comm *client);
   void handleMapRequest(MPI_Status status, MPI_Comm *client){}
-
 };
 
 
- class domp::MPIMasterServer : protected domp::MPIServer{
+class domp::MPIMasterServer : protected domp::MPIServer {
   int mapReceived;
   std::mutex mtx;
   std::list<std::pair<int,DOMPMapCommand_t*>> commands_received;
-  MPIMasterServer(std::string name, int size, int rank) :MPIServer(std::move(name), size, rank){
+  MPIMasterServer(DOMP *dompObject, char* clusterName, int size, int rank) :MPIServer(dompObject, clusterName, size, rank){
     mapReceived = 0;
   };
   void handleMapRequest(MPI_Status status, MPI_Comm *client);

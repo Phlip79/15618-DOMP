@@ -6,6 +6,7 @@
 
 #include "MPIServer.h"
 #include <mpi.h>
+#include <thread>
 
 namespace domp {
 
@@ -14,6 +15,8 @@ namespace domp {
 
   void MPIServer::accept() {
     MPI_Open_port(MPI_INFO_NULL, port_name);
+    char name[DOMP_MAX_CLIENT_NAME];
+    snprintf(name, DOMP_MAX_CLIENT_NAME, "%s-%d", clusterName, rank);
     MPI_Publish_name(name, MPI_INFO_NULL, port_name);
     printf("Server for node %d available at %s\n", rank, port_name);
     while (1) {
@@ -38,10 +41,15 @@ namespace domp {
             handleMapRequest(status, client);
           }
           break;
-        case MPI_MAP_RESP:break;
-        case MPI_DATA_CMD:break;
+        case MPI_MAP_RESP:
+          handleMapResponse(status, client);
+          break;
+        case MPI_DATA_CMD:
+          transferData(status, client);
+          break;
         default:
           // I am receiving data
+          // Handle data receive and synchronization here
           break;
       }
     }
@@ -49,22 +57,61 @@ namespace domp {
     delete (client);
   }
 
-  bool MPIServer::startServer() {
-    return true;
+  void MPIServer::startServer() {
+    // First start your own server thread
+    serverThread = std::thread(&MPIServer::accept, this);
+    // Now create connection to all other threads
+    char port_name[MPI_MAX_PORT_NAME];
+    char name[DOMP_MAX_CLIENT_NAME];
+    for (int i = 0; i < size; i++) {
+      snprintf(name, DOMP_MAX_CLIENT_NAME, "%s-%d", clusterName, i);
+      MPI_Lookup_name(name, MPI_INFO_NULL, port_name);
+      MPI_Comm_connect( port_name, MPI_INFO_NULL, i, MPI_COMM_WORLD, &nodeConnections[i]);
+    }
   }
 
-  bool MPIServer::stopServer() {
+  void MPIServer::stopServer() {
     MPI_Close_port(port_name);
-    return true;
   }
 
   void MPIServer::requestData(std::string varName, int start, int size, MPIAccessType accessType) {
+    // Keep accumulating all data requests. Send it at once in triggerMap function() called when synchronize is called
+    // Thread-safety not required. Assuming that caller is calling this function sequentially
     DOMPMapCommand_t command;
-    strncpy(command.varName, varName.c_str(), 50);
+    command.varName = varName;
     command.accessType = accessType;
     command.size = size;
     command.start = start;
     mapRequest->commands.push_back(command);
+  }
+
+  void MPIServer::handleMapResponse(MPI_Status status, MPI_Comm *client) {
+    if (status.MPI_ERROR == MPI_SUCCESS && status.MPI_SOURCE == 0) {
+      int count;
+      MPI_Get_count(&status, MPI_BYTE, &count);
+      char *buffer = new char[count];
+      MPI_Recv(buffer, count, MPI_BYTE, status.MPI_SOURCE, status.MPI_TAG, *client, NULL);
+      int requests = count / sizeof(DOMPMapCommand_t);
+      int tag = DOMP_MIN_DATA_TAG;
+      for(int i = 0; i < requests; i++) {
+        DOMPMapCommand_t *command = reinterpret_cast<DOMPMapCommand_t *>(buffer + i *sizeof(DOMPMapCommand_t));
+        // Send the Data request to slave nodes. Use already created connection
+        MPI_Isend(command, sizeof(DOMPMapCommand_t), MPI_BYTE, 0, tag, nodeConnections[command->nodeId], NULL);
+        // Keep track of all requests
+        dataRequests[tag++] = command;
+      }
+    }
+  }
+
+  void MPIServer::transferData(MPI_Status status, MPI_Comm *client) {
+    if (status.MPI_ERROR == MPI_SUCCESS) {
+      DOMPMapCommand_t command;
+      MPI_Recv(&command, sizeof(DOMPMapCommand_t), MPI_BYTE, status.MPI_SOURCE, status.MPI_TAG, *client, NULL);
+      std::pair<void*, int> ret = dompObject->mapDataRequest(command.varName, command.start, command.size);
+      void *buffer = ret.first;
+      // Someone requested data from me. Read and send the data to the specified node
+      MPI_Send(buffer, ret.second, MPI_BYTE, status.MPI_SOURCE, status.MPI_TAG, *client);
+    }
   }
 
   void MPIServer::triggerMap() {
@@ -77,8 +124,10 @@ namespace domp {
       memcpy(&buffer[i * sizeof(DOMPMapCommand_t)], &(*it)  , sizeof(DOMPMapCommand_t));
     }
 
-    // Send the MAP request to Master node
-    MPI_Send(buffer, size, MPI_BYTE, 0, MPI_MAP_REQ, MPI_COMM_WORLD);
+    // Send the MAP request to Master node. Use the already created connection
+    MPI_Send(buffer, size, MPI_BYTE, 0, MPI_MAP_REQ, nodeConnections[0]);
+    // Clear the commands now
+    mapRequest->commands.clear();
   }
 
 

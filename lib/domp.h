@@ -14,6 +14,10 @@
 
 
 namespace domp {
+#define DOMP_MAX_VAR_NAME (50)
+#define DOMP_MAX_CLUSTER_NAME (10)
+#define DOMP_MAX_CLIENT_NAME (DOMP_MAX_CLUSTER_NAME + 10)
+
 
   enum DOMP_TYPE {DOMP_INT, DOMP_FLOAT};
   enum DOMP_REDUCE_OP {DOMP_ADD, DOMP_SUBTRACT};
@@ -57,6 +61,7 @@ namespace domp {
 class domp::DOMP{
   int rank;
   int clusterSize;
+  char clusterName[DOMP_MAX_CLUSTER_NAME];
   std::map<std::string, Variable> varList;
  public:
   DOMP(int * argc, char ***argv);
@@ -69,6 +74,9 @@ class domp::DOMP{
   int Reduce(std::string varName, void *address, DOMP_TYPE type, DOMP_REDUCE_OP op);
   void Synchronize();
   bool IsMaster();
+
+  // These functions are used by MPIServer
+  std::pair<void *, int> mapDataRequest(std::string varName, int start, int size);
 };
 
 class domp::Fragment {

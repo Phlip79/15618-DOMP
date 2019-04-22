@@ -9,12 +9,32 @@
 //void debug_printf(char )
 
 namespace domp {
+
+void gen_random(char *s, const int len) {
+  static const char alphanum[] =
+    "0123456789"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz";
+
+  for (int i = 0; i < len; ++i) {
+    s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
+  }
+
+  s[len] = 0;
+}
+
 DOMP::DOMP(int *argc, char ***argv) {
   MPI_Init(argc, argv);
   clusterSize = 1;
   rank = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &clusterSize);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+  // Generate a random clusterName and broadcast it to all nodes
+  if (rank == 0) {
+    gen_random(clusterName, DOMP_MAX_CLUSTER_NAME - 1);
+  }
+  MPI_Bcast(clusterName, DOMP_MAX_CLUSTER_NAME, MPI_BYTE, 0, MPI_COMM_WORLD);
 }
 
 DOMP::~DOMP() {
@@ -44,7 +64,7 @@ void DOMP::FirstShared(std::string varName, int offset, int size) {
 
 }
 
-void DOMP::Register(std::string varName, void* varValue, DOMP_TYPE type) {
+void DOMP::Register(std::string varName, void *varValue, DOMP_TYPE type) {
 
 }
 
@@ -69,46 +89,10 @@ bool DOMP::IsMaster() {
   else return false;
 }
 
+std::pair<void *, int> DOMP::mapDataRequest(std::string varName, int start, int size) {
+  // TODO bookkeeping
+  int a;
+  return std::make_pair((void *) &a, 0);
 }
 
-//void DOMP_firstShared(domp_t *dompObject, enum DOMP_TYPE type, void *location, int offset, int size) {
-//  if (dompObject == NULL || location == NULL) {
-//
-//  }
-//
-//  // Search for the mapping
-//  ListNode *varNode = getDataNode(&dompObject->var_list, location, &cmp);
-//  if (varNode == NULL) {
-//    // Not found
-//    varNode = malloc(sizeof(ListNode));
-//    if (varNode != NULL) {
-//      domp_var_t *var = malloc(sizeof(domp_var_t));
-//      if (var != NULL) {
-//        varNode->data = var;
-//        initList(&var->intervals);
-//        ListNode *intervalNode = malloc(sizeof(ListNode));
-//        if (intervalNode != NULL) {
-//          domp_interval_t *interval = malloc(sizeof(domp_interval_t));
-//          if (interval != NULL) {
-//            intervalNode->data = interval;
-//            interval->nodeId = dompObject->rank;
-//            interval->start = offset;
-//            interval->size = size;
-//            varNode->data = var;
-//            // Insert nodes into linkedlist
-//            insertNodeFront(&var->intervals, intervalNode);
-//            insertNodeFront(&dompObject->var_list, varNode);
-//          }
-//        }
-//      }
-//    }
-//  } else {
-//    // Update the mapping
-//
-//  }
-//}
-//
-//static int cmp(void *a, void *b) {
-//  return ((void *) a == ((domp_var_t *) b)->ptr) ? 1 : 0;
-//}
-//}
+}
