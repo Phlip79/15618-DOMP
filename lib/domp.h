@@ -20,7 +20,7 @@ namespace domp {
 
   class DOMP;
   class Variable;
-  class Interval;
+  class Fragment;
 
   extern DOMP *dompObject;
 
@@ -71,13 +71,16 @@ class domp::DOMP{
   bool IsMaster();
 };
 
-class domp::Interval {
+class domp::Fragment {
   int start;
   int size;
   std::list <int> nodes;
-  Interval(int start, int size) {
+  bool isExclusive;
+ public:
+  Fragment(int start, int size, bool isExclusive) {
     this->start = start;
     this->size = size;
+    this->isExclusive = isExclusive;
   }
   void addNode(int nodeId) {
     this->nodes.push_back(nodeId);
@@ -85,7 +88,12 @@ class domp::Interval {
 };
 
 class domp::Variable {
-
+  void *ptr;
+  std::list<Fragment> fragments;
+ public:
+  Variable(void * ptr) {
+    this->ptr = ptr;
+  }
 };
 
 #endif //DOMP_DOMP_H

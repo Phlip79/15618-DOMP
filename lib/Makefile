@@ -9,8 +9,8 @@ CFLAGS=-c -g -O3 -Wall -DDEBUG=$(DEBUG)
 #LDFLAGS= -lm
 DDIR = ./data
 
-CFILES = domp.cpp util/linkedlist.cpp
-HFILES = domp.h util/linkedlist.h
+CFILES = domp.cpp MPIServer.cpp
+HFILES = domp.h MPIServer.h
 
 all: domp
 
