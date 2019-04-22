@@ -24,9 +24,12 @@ int compute(int total_size) {
 
 #pragma omp parallel
 {
+
+if (DOMP_IS_MASTER) {
 #pragma omp for
-  for(i=offset; i < (offset + size); i++)
+  for (i = offset; i < (offset + size); i++)
     arr[i] = i;
+}
 #pragma omp for reduction(+ : sum)
   for(i=offset; i < (offset + size); i++) {
     sum += arr[i];

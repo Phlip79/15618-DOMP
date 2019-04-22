@@ -50,6 +50,8 @@ namespace domp {
     delete(dompObject); \
     dompObject = NULL; \
   }
+
+  #define DOMP_IS_MASTER (dompObject->IsMaster())
 }
 
 class domp::DOMP{
@@ -66,6 +68,7 @@ class domp::DOMP{
   void Exclusive(std::string varName, int offset, int size);
   int Reduce(std::string varName, void *address, DOMP_TYPE type, DOMP_REDUCE_OP op);
   void Synchronize();
+  bool IsMaster();
 };
 
 class domp::Interval {
