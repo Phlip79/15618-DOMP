@@ -48,8 +48,8 @@ namespace domp {
           transferData(status, client);
           break;
         default:
-          // I am receiving data
           // Handle data receive and synchronization here
+          receiveData(status, client);
           break;
       }
     }
@@ -89,12 +89,12 @@ namespace domp {
     if (status.MPI_ERROR == MPI_SUCCESS && status.MPI_SOURCE == 0) {
       int count;
       MPI_Get_count(&status, MPI_BYTE, &count);
-      char *buffer = new char[count];
+      auto *buffer = new char[count];
       MPI_Recv(buffer, count, MPI_BYTE, status.MPI_SOURCE, status.MPI_TAG, *client, NULL);
       int requests = count / sizeof(DOMPMapCommand_t);
       int tag = DOMP_MIN_DATA_TAG;
       for(int i = 0; i < requests; i++) {
-        DOMPMapCommand_t *command = reinterpret_cast<DOMPMapCommand_t *>(buffer + i *sizeof(DOMPMapCommand_t));
+        auto *command = reinterpret_cast<DOMPMapCommand_t *>(buffer + i *sizeof(DOMPMapCommand_t));
         // Send the Data request to slave nodes. Use already created connection
         MPI_Isend(command, sizeof(DOMPMapCommand_t), MPI_BYTE, 0, tag, nodeConnections[command->nodeId], NULL);
         // Keep track of all requests
@@ -108,13 +108,43 @@ namespace domp {
       DOMPMapCommand_t command;
       MPI_Recv(&command, sizeof(DOMPMapCommand_t), MPI_BYTE, status.MPI_SOURCE, status.MPI_TAG, *client, NULL);
       std::pair<void*, int> ret = dompObject->mapDataRequest(command.varName, command.start, command.size);
-      void *buffer = ret.first;
+      auto buffer = ret.first;
       // Someone requested data from me. Read and send the data to the specified node
       MPI_Send(buffer, ret.second, MPI_BYTE, status.MPI_SOURCE, status.MPI_TAG, *client);
     }
   }
 
+
+  void MPIServer::receiveData(MPI_Status status, MPI_Comm *client) {
+    if (status.MPI_ERROR == MPI_SUCCESS) {
+      bool isLastReceived = false;
+      DOMPMapCommand_t *command = NULL;
+      // Get the corresponding command
+      {
+        std::unique_lock<std::mutex> lck(dataMtx);
+        if (dataRequests.count(status.MPI_TAG) != 0) {
+          command = dataRequests[status.MPI_TAG];
+          dataRequests.erase(status.MPI_TAG);
+          if (dataRequests.size() == 0) {
+            isLastReceived = true;
+          }
+        } else {
+          std::cout<<"Tag is not found"<< std::endl;
+        }
+      }
+      // Wait for the data transfer to finish
+      if (command != NULL) {
+        std::pair<void *, int> ret = dompObject->mapDataRequest(command->varName, command->start, command->size);
+        MPI_Recv(ret.first, ret.second, MPI_BYTE, status.MPI_SOURCE, status.MPI_TAG, *client, NULL);
+        // Now let the main thread know that we receieved all data
+        if (isLastReceived) dataReceived = true;
+        dataCV.notify_all();
+      }
+    }
+  }
+
   void MPIServer::triggerMap() {
+    dataReceived = false;
     ssize_t  size = mapRequest->commands.size() * sizeof(DOMPMapCommand_t);
     char buffer[size];
 
@@ -124,10 +154,19 @@ namespace domp {
       memcpy(&buffer[i * sizeof(DOMPMapCommand_t)], &(*it)  , sizeof(DOMPMapCommand_t));
     }
 
-    // Send the MAP request to Master node. Use the already created connection
+    // Send the MAP request to Master node always. Use the already created connection
     MPI_Send(buffer, size, MPI_BYTE, 0, MPI_MAP_REQ, nodeConnections[0]);
     // Clear the commands now
     mapRequest->commands.clear();
+    // Wait for the data transfer to finish
+    std::unique_lock<std::mutex> lck(dataMtx);
+    // If I had nothing to receive
+    if (mapRequest->commands.size() == 0) {
+      dataReceived = true;
+    }
+    while (!dataReceived) dataCV.wait(lck);
+    // Synchronization is must here
+    MPI_Barrier(MPI_COMM_WORLD);
   }
 
 
@@ -139,15 +178,15 @@ namespace domp {
       MPI_Recv(buffer, count, MPI_BYTE, status.MPI_SOURCE, status.MPI_TAG, *client, NULL);
       commands_received.push_back(std::make_pair(status.MPI_SOURCE,(DOMPMapCommand_t*)buffer));
 
-      mtx.lock();
+      mappingMtx.lock();
       if (mapReceived == (size - 1)) {
         // Respond to all slaves
-        mtx.unlock();
+        mappingMtx.unlock();
 
 
       } else {
         mapReceived ++;
-        mtx.unlock();
+        mappingMtx.unlock();
       }
     }
   }

@@ -77,6 +77,8 @@ class domp::DOMP{
 
   // These functions are used by MPIServer
   std::pair<void *, int> mapDataRequest(std::string varName, int start, int size);
+
+
 };
 
 class domp::Fragment {

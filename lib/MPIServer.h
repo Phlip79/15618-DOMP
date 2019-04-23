@@ -12,6 +12,7 @@
 #include <mpi.h>
 #include <map>
 #include <thread>
+#include <condition_variable>
 #include "domp.h"
 
 using namespace std;
@@ -55,6 +56,12 @@ class domp::MPIServer {
   std::map <int, DOMPMapCommand*> dataRequests;
   DOMP *dompObject;
 
+  // Locking and waiting mechanism for slave nodes requesting data
+  std::mutex dataMtx;
+  std::condition_variable dataCV;
+  bool dataReceived;
+
+
  public:
   MPIServer(DOMP *dompObject, char* clusterName, int size, int rank) {
     this->dompObject = dompObject;
@@ -74,6 +81,7 @@ class domp::MPIServer {
 
   void triggerMap();
   void transferData(MPI_Status status, MPI_Comm *client);
+  void receiveData(MPI_Status status, MPI_Comm *client);
   void handleMapResponse(MPI_Status status, MPI_Comm *client);
   void handleMapRequest(MPI_Status status, MPI_Comm *client){}
 };
@@ -81,7 +89,7 @@ class domp::MPIServer {
 
 class domp::MPIMasterServer : protected domp::MPIServer {
   int mapReceived;
-  std::mutex mtx;
+  std::mutex mappingMtx;
   std::list<std::pair<int,DOMPMapCommand_t*>> commands_received;
   MPIMasterServer(DOMP *dompObject, char* clusterName, int size, int rank) :MPIServer(dompObject, clusterName, size, rank){
     mapReceived = 0;

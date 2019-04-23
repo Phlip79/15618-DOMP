@@ -20,22 +20,23 @@ int compute(int total_size) {
   DOMP_EXCLUSIVE(arr, offset, size);
   DOMP_SYNC;
   int sum = 0;
-  std::cout<<"Offset is "<<offset<<", size is "<<size<<"\n";
 
-#pragma omp parallel
-{
+  #pragma omp parallel
+  {
 
-if (DOMP_IS_MASTER) {
-#pragma omp for
-  for (i = offset; i < (offset + size); i++)
-    arr[i] = i;
-}
-#pragma omp for reduction(+ : sum)
-  for(i=offset; i < (offset + size); i++) {
-    sum += arr[i];
-  }
-}
-  DOMP_REDUCE(sum, DOMP_INT, DOMP_ADD);
+    if (DOMP_IS_MASTER) {
+      // Basic initialization of array
+      #pragma omp for
+        for (i = offset; i < (offset + size); i++)
+          arr[i] = i;
+    }
+    #pragma omp for reduction(+ : sum)
+      // Array sum
+      for(i=offset; i < (offset + size); i++) {
+        sum += arr[i];
+      }
+    }
+    DOMP_REDUCE(sum, DOMP_INT, DOMP_ADD);
 
   return sum;
 }
