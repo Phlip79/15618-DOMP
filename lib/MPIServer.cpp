@@ -100,6 +100,12 @@ namespace domp {
         // Keep track of all requests
         dataRequests[tag++] = command;
       }
+      // If I had nothing to receive, notify the waiting master thread to continue
+      std::unique_lock<std::mutex> lck(dataMtx);
+      if (requests == 0) {
+        dataReceived = true;
+        dataCV.notify_all();
+      }
     }
   }
 
@@ -136,7 +142,7 @@ namespace domp {
       if (command != NULL) {
         std::pair<void *, int> ret = dompObject->mapDataRequest(command->varName, command->start, command->size);
         MPI_Recv(ret.first, ret.second, MPI_BYTE, status.MPI_SOURCE, status.MPI_TAG, *client, NULL);
-        // Now let the main thread know that we receieved all data
+        // Now let the main thread know that we have received all data
         if (isLastReceived) dataReceived = true;
         dataCV.notify_all();
       }
@@ -160,10 +166,6 @@ namespace domp {
     mapRequest->commands.clear();
     // Wait for the data transfer to finish
     std::unique_lock<std::mutex> lck(dataMtx);
-    // If I had nothing to receive
-    if (mapRequest->commands.size() == 0) {
-      dataReceived = true;
-    }
     while (!dataReceived) dataCV.wait(lck);
     // Synchronization is must here
     MPI_Barrier(MPI_COMM_WORLD);
