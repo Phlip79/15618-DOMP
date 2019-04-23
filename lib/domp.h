@@ -6,18 +6,17 @@
 #define DOMP_DOMP_H
 
 #include <iostream>
+#include <set>
 #include <list>
 #include <map>
 
 #include <stdbool.h>
-#include "util/linkedlist.h"
-
+#include "util/DoublyLinkedList.h"
 
 namespace domp {
-#define DOMP_MAX_VAR_NAME (50)
-#define DOMP_MAX_CLUSTER_NAME (10)
-#define DOMP_MAX_CLIENT_NAME (DOMP_MAX_CLUSTER_NAME + 10)
-
+  #define DOMP_MAX_VAR_NAME (50)
+  #define DOMP_MAX_CLUSTER_NAME (10)
+  #define DOMP_MAX_CLIENT_NAME (DOMP_MAX_CLUSTER_NAME + 10)
 
   enum DOMP_TYPE {DOMP_INT, DOMP_FLOAT};
   enum DOMP_REDUCE_OP {DOMP_ADD, DOMP_SUBTRACT};
@@ -25,7 +24,10 @@ namespace domp {
   class DOMP;
   class Variable;
   class Fragment;
+  class SplitList;
 
+  template <typename T>
+  class DoublyLinkedList;
   extern DOMP *dompObject;
 
   #define DOMP_INIT(argc, argv) { \
@@ -84,16 +86,37 @@ class domp::DOMP{
 class domp::Fragment {
   int start;
   int size;
-  std::list <int> nodes;
-  bool isExclusive;
+  int end;
+  std::set <int> nodes;
+  friend SplitList;
+  friend DoublyLinkedList<Fragment>;
+  Fragment *next;
+  Fragment *prev;
  public:
-  Fragment(int start, int size, bool isExclusive) {
+  Fragment(int start, int size, int nodeId) {
     this->start = start;
     this->size = size;
-    this->isExclusive = isExclusive;
+    this->end = start + size - 1; // Notice -1
+    next = prev = NULL;
+    this->nodes.insert(nodeId);
   }
+
+  Fragment(Fragment *from) {
+    this->start = from->start;
+    this->size = from->size;
+    this->end = start + size -  1; // Notice -1
+    next = prev = NULL;
+    this->nodes.insert(from->nodes.begin(), from->nodes.end());
+  }
+
   void addNode(int nodeId) {
-    this->nodes.push_back(nodeId);
+    this->nodes.insert(nodeId);
+  }
+
+  void update(int start, int end) {
+    this->start = start;
+    this->end = end;
+    this->size = end - start + 1;
   }
 };
 

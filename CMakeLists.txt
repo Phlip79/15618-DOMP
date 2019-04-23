@@ -5,4 +5,4 @@ set(CMAKE_CXX_STANDARD 11)
 
 add_executable(DOMP
         lib/Makefile
-        README.md lib/util/linkedlist.h lib/util/linkedlist.cpp tests/arraySum.cpp lib/domp.h lib/domp.cpp lib/MPIServer.cpp lib/MPIServer.h)
+        README.md lib/util/DoublyLinkedList.h tests/arraySum.cpp lib/domp.h lib/domp.cpp lib/MPIServer.cpp lib/MPIServer.h lib/util/SplitList.cpp lib/util/SplitList.h lib/util/DoublyLinkedList.cpp)
