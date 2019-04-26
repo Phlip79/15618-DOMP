@@ -27,7 +27,7 @@ namespace domp {
     }
 
     Fragment *current = fragments.begin();
-    while(current != fragments.end() || start > end) {
+    while(current != NULL || start > end) {
       // Case 1: ||
       if (start > current->end) {
         current = current->next;
@@ -47,8 +47,11 @@ namespace domp {
         auto nextNode = split(current, end, nodeId, SPLIT_ACCESS(accessType),USE_SECOND);
         if (nextNode != NULL && IS_FETCH(accessType)) {
           commands.push_back(createCommand(nextNode, varName));
+          start = nextNode->end + 1;
+          current = nextNode;
+        } else {
+          start = current->end + 1;
         }
-        break;
       }
       // Case 4: ||X||
       else if (start > current->start && end < current->end) {
@@ -119,14 +122,17 @@ namespace domp {
     std::list<DOMPMapCommand_t*> commands;
 
     Fragment *current = fragments.begin();
-    while(current != fragments.end() || start > end) {
-      if (start == current->start && end == current->end) {
+    while(current != NULL && start <= end) {
+      // Greater than as the requested interval could span multiple intervals
+      if (start == current->start && end >= current->end) {
+        // TODO: We should do coalesce here
         if (IS_EXCLUSIVE(accessType)) {
           current->nodes.clear();
         }
         current->nodes.insert(nodeId);
-        break;
-      } else if (start > current->end) {
+        start = current->end + 1;
+      }
+      else if (start > current->end) {
         // Nothing to do
       } else {
         std::cout<<"ERROR: This shouldn't have happened. Writephase, no interval found"<<std::endl;
