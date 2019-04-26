@@ -42,7 +42,7 @@ namespace domp {
         break;
       }
       // Case 3: ||X|
-      else if (start > current->start && end == current->end) {
+      else if (start > current->start && end >= current->end) {
         // Same case for both Exclusive fetch and shared fetch
         auto nextNode = split(current, end, nodeId, SPLIT_ACCESS(accessType),USE_SECOND);
         if (nextNode != NULL && IS_FETCH(accessType)) {

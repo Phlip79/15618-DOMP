@@ -122,7 +122,7 @@ class domp::Fragment {
 
 class domp::Variable {
   void *ptr;
-  std::list<Fragment> fragments;
+  DoublyLinkedList<Fragment> fragments;
  public:
   Variable(void * ptr) {
     this->ptr = ptr;
