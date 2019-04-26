@@ -13,7 +13,7 @@ namespace domp {
 
 template <typename T>
 class DoublyLinkedList {
-  uint32_t length; // <! size of list
+  uint32_t length; // <! clusterSize of list
   T* front; // <! pointer first node
   T* back; // <! pointer last node
  public:

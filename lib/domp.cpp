@@ -5,6 +5,7 @@
 #include <mpi.h>
 #include <stdlib.h>
 #include "domp.h"
+#include "MPIServer.h"
 
 //void debug_printf(char )
 
@@ -35,9 +36,19 @@ DOMP::DOMP(int *argc, char ***argv) {
     gen_random(clusterName, DOMP_MAX_CLUSTER_NAME - 1);
   }
   MPI_Bcast(clusterName, DOMP_MAX_CLUSTER_NAME, MPI_BYTE, 0, MPI_COMM_WORLD);
+
+  if (rank == 0) {
+    mpiServer = new MPIMasterServer(dompObject, clusterName, clusterSize, rank);
+  } else {
+    mpiServer = new MPIServer(dompObject, clusterName, clusterSize, rank);
+  }
+  mpiServer->startServer();
 }
 
 DOMP::~DOMP() {
+  mpiServer->stopServer();
+  delete(mpiServer);
+
   MPI_Finalize();
 }
 

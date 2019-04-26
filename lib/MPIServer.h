@@ -48,7 +48,7 @@ namespace domp {
 
 class domp::MPIServer {
  protected:
-  int size;
+  int clusterSize;
   int rank;
   char clusterName[DOMP_MAX_CLUSTER_NAME];
   char port_name[MPI_MAX_PORT_NAME];
@@ -67,10 +67,10 @@ class domp::MPIServer {
 
 
  public:
-  MPIServer(DOMP *dompObject, char* clusterName, int size, int rank) {
+  MPIServer(DOMP *dompObject, char* clusterName, int clusterSize, int rank) {
     this->dompObject = dompObject;
     strncpy(this->clusterName, clusterName, DOMP_MAX_CLUSTER_NAME);
-    this->size = size;
+    this->clusterSize = clusterSize;
     this->rank = rank;
     this->mapRequest = new DOMPMapRequest_t();
     nodeConnections = new MPI_Comm[this->rank];
@@ -91,10 +91,11 @@ class domp::MPIServer {
 };
 
 
-class domp::MPIMasterServer : protected domp::MPIServer {
+class domp::MPIMasterServer : public domp::MPIServer {
   int mapReceived;
   std::mutex mappingMtx;
   std::list<std::pair<int,DOMPMapCommand_t*>> commands_received;
+  public:
   MPIMasterServer(DOMP *dompObject, char* clusterName, int size, int rank) :MPIServer(dompObject, clusterName, size, rank){
     mapReceived = 0;
   };

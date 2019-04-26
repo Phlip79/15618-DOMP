@@ -1,5 +1,3 @@
-CC=g++
-
 MPI =-DDEBUG_DOMP
 MPICC = mpic++
 

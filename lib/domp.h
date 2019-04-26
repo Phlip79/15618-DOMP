@@ -25,6 +25,8 @@ namespace domp {
   class Variable;
   class Fragment;
   class SplitList;
+  class MPIServer;
+  class MasterMPIServer;
 
   template <typename T>
   class DoublyLinkedList;
@@ -39,6 +41,7 @@ namespace domp {
   #define DOMP_PARALLELIZE(var, offset, size) { \
     dompObject->Parallelize(var, offset, size); \
   }
+
   #define DOMP_SHARED(var, offset, size) { \
     dompObject->Shared(#var, offset, size); \
   }
@@ -65,6 +68,7 @@ class domp::DOMP{
   int clusterSize;
   char clusterName[DOMP_MAX_CLUSTER_NAME];
   std::map<std::string, Variable> varList;
+  MPIServer *mpiServer;
  public:
   DOMP(int * argc, char ***argv);
   ~DOMP();

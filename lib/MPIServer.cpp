@@ -19,10 +19,12 @@ namespace domp {
     snprintf(name, DOMP_MAX_CLIENT_NAME, "%s-%d", clusterName, rank);
     MPI_Publish_name(name, MPI_INFO_NULL, port_name);
     printf("Server for node %d available at %s\n", rank, port_name);
-    while (1) {
+    while (true) {
       MPI_Comm *client = new MPI_Comm();
       MPI_Comm_accept(port_name, MPI_INFO_NULL, 0, MPI_COMM_WORLD, client);
-      handleRequest(client);
+      // Handle in a new thread
+      // TODO: Consider using a threadpool instead of spawning thread every time
+      std::thread(&MPIServer::handleRequest, this, client);
     }
   }
 
@@ -63,7 +65,7 @@ namespace domp {
     // Now create connection to all other threads
     char port_name[MPI_MAX_PORT_NAME];
     char name[DOMP_MAX_CLIENT_NAME];
-    for (int i = 0; i < size; i++) {
+    for (int i = 0; i < clusterSize; i++) {
       snprintf(name, DOMP_MAX_CLIENT_NAME, "%s-%d", clusterName, i);
       MPI_Lookup_name(name, MPI_INFO_NULL, port_name);
       MPI_Comm_connect( port_name, MPI_INFO_NULL, i, MPI_COMM_WORLD, &nodeConnections[i]);
@@ -72,6 +74,7 @@ namespace domp {
 
   void MPIServer::stopServer() {
     MPI_Close_port(port_name);
+    // TODO: Close the connections to all other servers
   }
 
   void MPIServer::requestData(std::string varName, int start, int size, MPIAccessType accessType) {
@@ -181,7 +184,7 @@ namespace domp {
       commands_received.push_back(std::make_pair(status.MPI_SOURCE,(DOMPMapCommand_t*)buffer));
 
       mappingMtx.lock();
-      if (mapReceived == (size - 1)) {
+      if (mapReceived == (clusterSize - 1)) {
         // Respond to all slaves
         mappingMtx.unlock();
 
