@@ -4,10 +4,16 @@ OMP=-fopenmp -msse4.2 -msse2 -msse3
 CFLAGS=-g -O3 -Wall -DDEBUG=$(DEBUG) -std=c++11
 LDFLAGS= -lm
 
-all: domp arraySum
+DOMP_LIB = lib/domplib.a
 
-domp: lib/domp.o
+all: arraySum
+
+DOMP_LIB:
 	(cd lib; make)
 
-arraySum: domp tests/arraySum.cpp
-	$(CC) $(CFLAGS) $(OMP) -o build/arraySum tests/arraySum.cpp lib/domp.o $(LDFLAGS)
+arraySum: DOMP_LIB tests/arraySum.cpp
+	$(CC) $(CFLAGS) $(OMP) -o build/arraySum tests/arraySum.cpp $(DOMP_LIB) $(LDFLAGS)
+
+clean:
+	rm -rf build/*.o
+	(cd lib; make clean)

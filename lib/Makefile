@@ -1,20 +1,22 @@
 MPI =-DDEBUG_DOMP
 MPICC = mpic++
 
-
 DEBUG=0
 CFLAGS=-c -g -O3 -Wall -DDEBUG=$(DEBUG) -std=c++11
-#LDFLAGS= -lm
-DDIR = ./data
 
-CFILES = domp.cpp MPIServer.cpp util/SplitList.cpp util/DoublyLinkedList.cpp
+SRCS = domp.cpp MPIServer.cpp util/SplitList.cpp util/DoublyLinkedList.cpp
 HFILES = domp.h MPIServer.h util/SplitList.h util/DoublyLinkedList.h
 
-all: domp
+OBJS := ${SRCS:.cpp=.o}
 
-domp: $(CFILES) $(HFILES)
-	$(MPICC) $(CFLAGS) $(MPI) $(CFILES)
+all: domplib.a
+
+%.o : %.cpp
+	$(MPICC) $(CFLAGS) $(MPI) $< -o $@
+
+domplib.a: $(OBJS) #let's link library files into a static library
+	ar rcu domplib.a $(OBJS)
+	ranlib domplib.a
 
 clean:
-	rm -f *.o
-
+	rm -f *.o util/*.o *.a

@@ -76,13 +76,9 @@ class domp::MPIServer {
     nodeConnections = new MPI_Comm[this->rank];
   }
   ~MPIServer();
-
-
   void startServer();
   void stopServer();
-
   void requestData(std::string varName, int start, int size, MPIAccessType accessType);
-
   void triggerMap();
   void transferData(MPI_Status status, MPI_Comm *client);
   void receiveData(MPI_Status status, MPI_Comm *client);
