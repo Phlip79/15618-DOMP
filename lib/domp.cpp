@@ -11,6 +11,18 @@
 
 namespace domp {
 
+void log(char *fmt, ...) {
+#if DEBUG
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
+  bool got_newline = fmt[strlen(fmt) - 1] == '\n';
+  if (!got_newline)
+    fprintf(stderr, "\n");
+#endif
+}
+
 void gen_random(char *s, const int len) {
   static const char alphanum[] =
     "0123456789"
@@ -36,6 +48,8 @@ DOMP::DOMP(int *argc, char ***argv) {
     gen_random(clusterName, DOMP_MAX_CLUSTER_NAME - 1);
   }
   MPI_Bcast(clusterName, DOMP_MAX_CLUSTER_NAME, MPI_BYTE, 0, MPI_COMM_WORLD);
+
+  log("My rank=%d, size=%d, ClusterName=%s\n", rank, clusterSize, clusterName);
 
   if (rank == 0) {
     mpiServer = new MPIMasterServer(dompObject, clusterName, clusterSize, rank);

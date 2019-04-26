@@ -14,14 +14,15 @@ namespace domp {
   }
 
   void MPIServer::accept() {
-    MPI_Open_port(MPI_INFO_NULL, port_name);
-    char name[DOMP_MAX_CLIENT_NAME];
-    snprintf(name, DOMP_MAX_CLIENT_NAME, "%s-%d", clusterName, rank);
-    MPI_Publish_name(name, MPI_INFO_NULL, port_name);
-    printf("Server for node %d available at %s\n", rank, port_name);
+//    MPI_Open_port(MPI_INFO_NULL, port_name);
+//    char name[DOMP_MAX_CLIENT_NAME];
+//    snprintf(name, DOMP_MAX_CLIENT_NAME, "%s-%d", clusterName, rank);
+//    MPI_Publish_name(name, MPI_INFO_NULL, port_name);
+//    printf("Server %s for node %d available at %s\n", name, rank, port_name);
     while (true) {
       MPI_Comm *client = new MPI_Comm();
-      MPI_Comm_accept(port_name, MPI_INFO_NULL, 0, MPI_COMM_WORLD, client);
+      MPI_Comm_accept(port_name, MPI_INFO_NULL, 0, MPI_COMM_SELF, client);
+      log("Node %d received a request\b", rank);
       // Handle in a new thread
       // TODO: Consider using a threadpool instead of spawning thread every time
       std::thread(&MPIServer::handleRequest, this, client);
@@ -60,16 +61,30 @@ namespace domp {
   }
 
   void MPIServer::startServer() {
+    MPI_Open_port(MPI_INFO_NULL, port_name);
+    char name[DOMP_MAX_CLIENT_NAME];
+    snprintf(name, DOMP_MAX_CLIENT_NAME, "%s-%d", clusterName, rank);
+    MPI_Publish_name(name, MPI_INFO_NULL, port_name);
+    log("Server %s for node %d available at %s\n", name, rank, port_name);
+
     // First start your own server thread
     serverThread = std::thread(&MPIServer::accept, this);
+
+    // Wait for all nodes to start their server first
+    MPI_Barrier(MPI_COMM_WORLD);
+
     // Now create connection to all other threads
-    char port_name[MPI_MAX_PORT_NAME];
-    char name[DOMP_MAX_CLIENT_NAME];
+    char c_port_name[MPI_MAX_PORT_NAME];
     for (int i = 0; i < clusterSize; i++) {
-      snprintf(name, DOMP_MAX_CLIENT_NAME, "%s-%d", clusterName, i);
-      MPI_Lookup_name(name, MPI_INFO_NULL, port_name);
-      MPI_Comm_connect( port_name, MPI_INFO_NULL, i, MPI_COMM_WORLD, &nodeConnections[i]);
+      if (i != rank) {
+        snprintf(name, DOMP_MAX_CLIENT_NAME, "%s-%d", clusterName, i);
+        MPI_Lookup_name(name, MPI_INFO_NULL, c_port_name);
+        log("Node %d connecting to client %s at port %s\n", rank, name, c_port_name);
+        MPI_Comm_connect(c_port_name, MPI_INFO_NULL, 0, MPI_COMM_SELF, &nodeConnections[i]);
+      }
     }
+    log("All connections established by node %d\n", rank);
+
   }
 
   void MPIServer::stopServer() {

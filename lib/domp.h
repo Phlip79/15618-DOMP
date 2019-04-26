@@ -28,6 +28,8 @@ namespace domp {
   class MPIServer;
   class MasterMPIServer;
 
+  void log(char *fmt, ...);
+
   template <typename T>
   class DoublyLinkedList;
   extern DOMP *dompObject;
