@@ -23,13 +23,10 @@ int compute(int total_size) {
 
   #pragma omp parallel
   {
-
-    if (DOMP_IS_MASTER) {
-      // Basic initialization of array
-      #pragma omp for
-        for (i = offset; i < (offset + size); i++)
-          arr[i] = i;
-    }
+    // Basic initialization of array
+    #pragma omp for
+    for (i = offset; i < (offset + size); i++)
+        arr[i] = i;
     #pragma omp for reduction(+ : sum)
       // Array sum
       for(i=offset; i < (offset + size); i++) {
@@ -37,7 +34,6 @@ int compute(int total_size) {
       }
     }
     DOMP_REDUCE(sum, DOMP_INT, DOMP_ADD);
-
   return sum;
 }
 

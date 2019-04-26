@@ -11,7 +11,7 @@
 
 namespace domp {
 
-void log(char *fmt, ...) {
+void log(const char *fmt, ...) {
 #if DEBUG
   va_list ap;
   va_start(ap, fmt);
@@ -37,7 +37,8 @@ void gen_random(char *s, const int len) {
 }
 
 DOMP::DOMP(int *argc, char ***argv) {
-  MPI_Init(argc, argv);
+  int provided;
+  MPI_Init_thread(argc, argv, MPI_THREAD_MULTIPLE, &provided);
   clusterSize = 1;
   rank = 0;
   MPI_Comm_size(MPI_COMM_WORLD, &clusterSize);
@@ -49,7 +50,7 @@ DOMP::DOMP(int *argc, char ***argv) {
   }
   MPI_Bcast(clusterName, DOMP_MAX_CLUSTER_NAME, MPI_BYTE, 0, MPI_COMM_WORLD);
 
-  log("My rank=%d, size=%d, ClusterName=%s\n", rank, clusterSize, clusterName);
+  log("My rank=%d, size=%d, ClusterName=%s, provided support=%d\n", rank, clusterSize, clusterName, provided);
 
   if (rank == 0) {
     mpiServer = new MPIMasterServer(dompObject, clusterName, clusterSize, rank);

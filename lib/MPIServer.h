@@ -22,7 +22,7 @@ namespace domp {
 
   class MPIServer;
   class MPIMasterServer;
-  enum MPIServerTag {MPI_MAP_REQ= 0, MPI_MAP_RESP, MPI_DATA_CMD};
+  enum MPIServerTag {MPI_MAP_REQ= 0, MPI_MAP_RESP, MPI_DATA_CMD, MPI_EXIT_CMD, MPI_EXIT_ACK};
   enum MPIAccessType {MPI_SHARED_FETCH= 0, MPI_EXCLUSIVE_FETCH, MPI_SHARED_FIRST, MPI_EXCLUSIVE_FIRST};
 
 #define IS_EXCLUSIVE(e) ((e == MPI_EXCLUSIVE_FETCH) ||(e == MPI_EXCLUSIVE_FIRST))
@@ -55,7 +55,7 @@ class domp::MPIServer {
   std::thread serverThread;
   MPI_Comm *nodeConnections;
   void accept();
-  void handleRequest(MPI_Comm *client);
+  void handleRequest(MPI_Status *status);
   DOMPMapRequest_t *mapRequest;
   std::map <int, DOMPMapCommand*> dataRequests;
   DOMP *dompObject;
@@ -63,6 +63,7 @@ class domp::MPIServer {
   // Locking and waiting mechanism for slave nodes requesting data
   std::mutex dataMtx;
   std::condition_variable dataCV;
+  std::condition_variable exitCondv;
   bool dataReceived;
 
 
@@ -80,10 +81,11 @@ class domp::MPIServer {
   void stopServer();
   void requestData(std::string varName, int start, int size, MPIAccessType accessType);
   void triggerMap();
-  void transferData(MPI_Status status, MPI_Comm *client);
-  void receiveData(MPI_Status status, MPI_Comm *client);
-  void handleMapResponse(MPI_Status status, MPI_Comm *client);
-  void handleMapRequest(MPI_Status status, MPI_Comm *client){}
+  void transferData(MPI_Status *status);
+  void receiveData(MPI_Status *status);
+  void handleMapResponse(MPI_Status *status);
+  void handleMapRequest(MPI_Status *status){}
+  bool serverRunning;
 };
 
 
@@ -95,6 +97,6 @@ class domp::MPIMasterServer : public domp::MPIServer {
   MPIMasterServer(DOMP *dompObject, char* clusterName, int size, int rank) :MPIServer(dompObject, clusterName, size, rank){
     mapReceived = 0;
   };
-  void handleMapRequest(MPI_Status status, MPI_Comm *client);
+  void handleMapRequest(MPI_Status *status);
 };
 #endif //DOMP_MPISERVER_H

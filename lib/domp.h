@@ -28,7 +28,7 @@ namespace domp {
   class MPIServer;
   class MasterMPIServer;
 
-  void log(char *fmt, ...);
+  void log(const char *fmt, ...);
 
   template <typename T>
   class DoublyLinkedList;
