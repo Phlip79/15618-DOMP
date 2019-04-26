@@ -14,7 +14,7 @@ int compute(int total_size) {
   int *arr = new int[total_size];
   int i, offset, size;
 
-  DOMP_REGISTER(arr, DOMP_INT);
+  DOMP_REGISTER(arr, MPI_INT);
   DOMP_PARALLELIZE(total_size, &offset, &size);
 
   DOMP_EXCLUSIVE(arr, offset, size);
@@ -33,7 +33,7 @@ int compute(int total_size) {
         sum += arr[i];
       }
     }
-    DOMP_REDUCE(sum, DOMP_INT, DOMP_ADD);
+    sum = DOMP_REDUCE(sum, MPI_INT, MPI_SUM);
   return sum;
 }
 
@@ -41,8 +41,9 @@ int main(int argc, char **argv) {
   DOMP_INIT(&argc, &argv);
   int sum = compute(200);
 
-  std::cout<<"Hello the total sum is "<<sum<<std::endl;
-
+  if(DOMP_IS_MASTER) {
+    std::cout << "Hello the total sum is " << sum << std::endl;
+  }
   DOMP_FINALIZE()
   return 0;
 }

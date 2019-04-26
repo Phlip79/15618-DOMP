@@ -61,6 +61,7 @@ DOMP::DOMP(int *argc, char ***argv) {
 }
 
 DOMP::~DOMP() {
+  log("Node %d destructor called", rank);
   mpiServer->stopServer();
   delete(mpiServer);
 
@@ -90,7 +91,7 @@ void DOMP::FirstShared(std::string varName, int offset, int size) {
 
 }
 
-void DOMP::Register(std::string varName, void *varValue, DOMP_TYPE type) {
+void DOMP::Register(std::string varName, void *varValue, MPI_Datatype type) {
 
 }
 
@@ -102,8 +103,12 @@ void DOMP::Exclusive(std::string varName, int offset, int size) {
 
 }
 
-int DOMP::Reduce(std::string varName, void *address, DOMP_TYPE type, DOMP_REDUCE_OP op) {
-  return 0;
+int DOMP::Reduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op) {
+  int val;
+  log("Node %d calling reduce on %s",rank, varName.c_str());
+  MPI_Reduce(address, &val, 1, type, op, 0, MPI_COMM_WORLD);
+  log("Node %d returned reduce on %s",rank, varName.c_str());
+  return val;
 }
 
 void DOMP::Synchronize() {

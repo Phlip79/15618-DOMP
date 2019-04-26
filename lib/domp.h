@@ -10,6 +10,7 @@
 #include <list>
 #include <map>
 
+#include <mpi.h>
 #include <stdbool.h>
 #include "util/DoublyLinkedList.h"
 
@@ -54,9 +55,8 @@ namespace domp {
 
   #define DOMP_SYNC { dompObject->Synchronize(); }
 
-  #define DOMP_REDUCE(var, type, op) { \
-    dompObject->Reduce(#var, (void*)&(var), type, op); \
-  }
+  #define DOMP_REDUCE(var, type, op) (dompObject->Reduce(#var, (void*)&(var), type, op))
+
   #define DOMP_FINALIZE() { \
     delete(dompObject); \
     dompObject = NULL; \
@@ -74,12 +74,12 @@ class domp::DOMP{
  public:
   DOMP(int * argc, char ***argv);
   ~DOMP();
-  void Register(std::string varName, void* varValue, DOMP_TYPE type);
+  void Register(std::string varName, void* varValue, MPI_Datatype type);
   void Parallelize(int totalSize, int *offset, int *size);
   void FirstShared(std::string varName, int offset, int size);
   void Shared(std::string varName, int offset, int size);
   void Exclusive(std::string varName, int offset, int size);
-  int Reduce(std::string varName, void *address, DOMP_TYPE type, DOMP_REDUCE_OP op);
+  int Reduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op);
   void Synchronize();
   bool IsMaster();
 
