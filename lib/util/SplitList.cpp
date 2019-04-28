@@ -2,29 +2,24 @@
 // Created by Apoorv Gupta on 4/22/19.
 //
 
+#include <iostream>
 #include "SplitList.h"
 
 using namespace std;
 
 namespace domp {
-  SplitList::SplitList() {
+  SplitList::SplitList(int start, int size, int nodeId) {
+    fragments.InsertFront(new Fragment(start, size, nodeId));
   }
 
   // This is the read phase. This is where we read where data existed in previous phase, so that we can read it from
   // that node. In this function, we also perform the splitting.
-  std::list<DOMPMapCommand_t*> SplitList::ReadPhase(DOMPMapCommand_t command) {
-    int start = command.start;
-    int end = command.start + command.size;
-    int nodeId = command.nodeId;
-    MPIAccessType  accessType = command.accessType;
-    std::string varName = command.varName;
-    std::list<DOMPMapCommand_t*> commands;
-
-    if(fragments.IsEmpty()) {
-      auto fragment = new Fragment(start, command.size, nodeId);
-      fragments.InsertFront(fragment);
-      return commands;
-    }
+  void SplitList::ReadPhase(DOMPMapCommand_t *command, CommandManager *commandManager) {
+    int start = command->start;
+    int end = command->start + command->size;
+    int nodeId = command->nodeId;
+    MPIAccessType  accessType = command->accessType;
+    std::string varName = command->varName;
 
     Fragment *current = fragments.begin();
     while(current != NULL || start > end) {
@@ -35,18 +30,18 @@ namespace domp {
       }
       // Case 2: |X||
       if (start == current->start && end < current->end) {
-        auto nextNode = split(current, end, nodeId, SPLIT_ACCESS(accessType),USE_FIRST);
+        auto nextNode = Split(current, end, nodeId, SPLIT_ACCESS(accessType), USE_FIRST);
         if (nextNode != NULL && IS_FETCH(accessType)) {
-          commands.push_back(createCommand(current, varName));
+          CreateCommand(commandManager, nodeId, current, varName);
         }
         break;
       }
       // Case 3: ||X|
       else if (start > current->start && end >= current->end) {
         // Same case for both Exclusive fetch and shared fetch
-        auto nextNode = split(current, end, nodeId, SPLIT_ACCESS(accessType),USE_SECOND);
+        auto nextNode = Split(current, end, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
         if (nextNode != NULL && IS_FETCH(accessType)) {
-          commands.push_back(createCommand(nextNode, varName));
+          CreateCommand(commandManager, nodeId, nextNode, varName);
           start = nextNode->end + 1;
           current = nextNode;
         } else {
@@ -56,14 +51,14 @@ namespace domp {
       // Case 4: ||X||
       else if (start > current->start && end < current->end) {
         // Same case for both Exclusive fetch and shared fetch
-        // We need to split twice
-        // First split using second
-        auto nextNode = split(current, start, nodeId, SPLIT_ACCESS(accessType),USE_SECOND);
+        // We need to Split twice
+        // First Split using second
+        auto nextNode = Split(current, start, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
         if (nextNode != NULL) {
-          // Second split using first. See last argument as true here.
-          auto nextNextNode = split(nextNode, end, nodeId, SPLIT_ACCESS(accessType),USE_FIRST);
+          // Second Split using first. See last argument as true here.
+          auto nextNextNode = Split(nextNode, end, nodeId, SPLIT_ACCESS(accessType), USE_FIRST);
           if (nextNextNode != NULL) {
-            commands.push_back(createCommand(nextNode, varName));
+            CreateCommand(commandManager, nodeId, nextNode, varName);
           }
         }
         break;
@@ -72,22 +67,24 @@ namespace domp {
       else if (start == current->start && end >= current->end) {
         if (current->nodes.count(nodeId) == 0) {
           if (IS_FETCH(accessType)) {
-            commands.push_back(createCommand(current, varName));
-          }
+            CreateCommand(commandManager, nodeId, current, varName);
+            }
         }
         // Update start
         start = current->end + 1;
       }
       current = current->next;
     }
-    return commands;
-
   }
 
 
-  Fragment* SplitList::split(Fragment *current, int splitPoint, int nodeId, SplitListAccessType accessType, SplitListUseNode useNode) {
+  Fragment* SplitList::Split(Fragment *current,
+                             int splitPoint,
+                             int nodeId,
+                             SplitListAccessType accessType,
+                             SplitListUseNode useNode) {
     if (accessType != EXCLUSIVE) {
-      // If not exclusive and already have it, don't split
+      // If not exclusive and already have it, don't Split
       if (current->nodes.count(nodeId) != 0) return NULL;
     }
     // Create a copy of the fragment
@@ -99,26 +96,22 @@ namespace domp {
     return fragment;
   }
 
-  DOMPMapCommand_t* SplitList::createCommand(Fragment *fragment, std::string varName) {
-    DOMPMapCommand_t *command = new DOMPMapCommand_t();
-    command->start = fragment->start;
-    command->size = fragment->size;
-    command->varName = varName;
+  void SplitList::CreateCommand(CommandManager *commandManager, int destination, Fragment *fragment, std::string
+  varName) {
     // Logic from which node to fetch the data. We can distribute it to multiple nodes, if multiple nodes have the data
-    command->nodeId = *fragment->nodes.begin();
-    return command;
-
+    int source = *fragment->nodes.begin();
+    commandManager->InsertCommand(varName, fragment->start, fragment->size, source, destination);
   }
 
   // This is the write phase. This is when the new nodeIds will be added and previous nodeIds will be deleted for
   // exclusive nodes
-  void SplitList::WritePhase(DOMPMapCommand_t command) {
-    // For write phase, split should have happened already
-    int start = command.start;
-    int end = command.start + command.size;
-    int nodeId = command.nodeId;
-    MPIAccessType  accessType = command.accessType;
-    std::string varName = command.varName;
+  void SplitList::WritePhase(DOMPMapCommand_t *command) {
+    // For write phase, Split should have happened already
+    int start = command->start;
+    int end = command->start + command->size;
+    int nodeId = command->nodeId;
+    MPIAccessType  accessType = command->accessType;
+    std::string varName = command->varName;
     std::list<DOMPMapCommand_t*> commands;
 
     Fragment *current = fragments.begin();

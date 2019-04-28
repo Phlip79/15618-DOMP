@@ -22,13 +22,8 @@ namespace domp {
   enum DOMP_REDUCE_OP {DOMP_ADD, DOMP_SUBTRACT};
 
   class DOMP;
-  class Variable;
-  class Fragment;
-  class SplitList;
   class DataManager;
-  class MasterMPIServer;
-  class MasterVariable;
-
+  class Variable;
 
 void log(const char *fmt, ...);
   extern DOMP *dompObject;

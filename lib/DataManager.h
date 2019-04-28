@@ -14,36 +14,24 @@
 #include <thread>
 #include <condition_variable>
 #include "domp.h"
-#include "util/DoublyLinkedList.h"
+#include "CommandManager.h"
+#include "util/SplitList.h"
 
 using namespace std;
 
 namespace domp {
 
 #define DOMP_MIN_DATA_TAG (100)
+#define DOMP_INVALID_NODE (-1)
 
   class DataManager;
   class MasterDataManager;
   class Fragment;
+  class MasterVariable;
 
-  template class DoublyLinkedList<Fragment>;
 
   enum MPIServerTag {MPI_MAP_REQ= 0, MPI_MAP_RESP, MPI_DATA_CMD, MPI_EXIT_CMD, MPI_EXIT_ACK};
   enum MPICommandType {MPI_DATA_FETCH = 0, MPI_DATA_SEND};
-  enum MPIAccessType {MPI_SHARED_FETCH= 0, MPI_EXCLUSIVE_FETCH, MPI_SHARED_FIRST, MPI_EXCLUSIVE_FIRST};
-
-#define IS_EXCLUSIVE(e) ((e == MPI_EXCLUSIVE_FETCH) ||(e == MPI_EXCLUSIVE_FIRST))
-#define IS_FETCH(e) ((e == MPI_SHARED_FETCH) || (e == MPI_EXCLUSIVE_FETCH))
-
-
-  typedef struct DOMPMapCommand {
-    std::string varName;
-    int start;
-    int size;
-    MPIAccessType accessType;
-    int nodeId;
-  } DOMPMapCommand_t;
-
 
   typedef struct DOMPDataCommand {
     std::string varName;
@@ -60,8 +48,6 @@ namespace domp {
   } DOMPMapRequest_t;
 
 }
-
-
 
 class domp::DataManager {
  protected:
@@ -82,12 +68,13 @@ class domp::DataManager {
 };
 
 class domp::MasterDataManager : public domp::DataManager {
-  std::list<std::pair<int,DOMPMapCommand_t>> commands_received;
+  std::list<DOMPMapCommand_t> commands_received;
   std::map<std::string, MasterVariable*> varList;
+  CommandManager *commandManager;
 
  public:
-  MasterDataManager(DOMP *dompObject, int size, int rank) :DataManager(dompObject, size, rank){
-
+  MasterDataManager(DOMP *dompObject, int clusterSize, int rank) :DataManager(dompObject, clusterSize, rank){
+    commandManager =  new CommandManager(clusterSize);
   };
 
   ~MasterDataManager();
@@ -97,53 +84,20 @@ class domp::MasterDataManager : public domp::DataManager {
   void registerVariable(std::string varName, Variable *variable);
 };
 
-class domp::Fragment {
-  int start;
-  int size;
-  int end;
-  std::set <int> nodes;
-  friend SplitList;
-  friend DoublyLinkedList<Fragment>;
-  Fragment *next;
-  Fragment *prev;
- public:
-  Fragment(int start, int size, int nodeId) {
-    this->start = start;
-    this->size = size;
-    this->end = start + size - 1; // Notice -1
-    next = prev = NULL;
-    this->nodes.insert(nodeId);
-  }
-
-  Fragment(Fragment *from) {
-    this->start = from->start;
-    this->size = from->size;
-    this->end = start + size -  1; // Notice -1
-    next = prev = NULL;
-    this->nodes.insert(from->nodes.begin(), from->nodes.end());
-  }
-
-  void addNode(int nodeId) {
-    this->nodes.insert(nodeId);
-  }
-
-  void update(int start, int end) {
-    this->start = start;
-    this->end = end;
-    this->size = end - start + 1;
-  }
-};
-
 
 
 class domp::MasterVariable {
   void *ptr;
-  DoublyLinkedList<Fragment> fragments;
+  SplitList *dataList;
  public:
   MasterVariable(void * ptr, int size) {
     this->ptr = ptr;
-    auto *fragment = new Fragment(0, size, -1);
-    fragments.InsertFront(fragment);
+    dataList = new SplitList(0, size, DOMP_INVALID_NODE);
+  }
+
+  void applyCommand(CommandManager *commandManager, DOMPMapCommand_t *command) {
+    dataList->ReadPhase(command, commandManager);
+    dataList->WritePhase(command);
   }
 };
 
