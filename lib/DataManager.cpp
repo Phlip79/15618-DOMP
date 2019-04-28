@@ -49,7 +49,7 @@ namespace domp {
       auto *buffer = new char[count];
       MPI_Recv(buffer, count, MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, mpi_comm, NULL);
       int numRequests = count / sizeof(DOMPDataCommand_t);
-      log("SLAVE %d::Data request response received with %d requests.", rank, numRequests);
+      log("Node %d::Data request response received with %d requests.", rank, numRequests);
       MPI_Request *requests = new MPI_Request[numRequests];
       for(int i = 0; i < numRequests; i++) {
         auto *command = reinterpret_cast<DOMPDataCommand_t *>(buffer + i *sizeof(DOMPDataCommand_t));
@@ -154,6 +154,7 @@ namespace domp {
       log("MASTER sending commands for size %d to nodeId %d", data.second/sizeof(DOMPDataCommand_t), index);
       MPI_Isend(data.first, data.second, MPI_BYTE, index, MPI_MAP_RESP, mpi_comm, &requests[index-1]);
       index++;
+      delete(data.first);
     }
     MPI_Waitall(clusterSize - 1 , requests, NULL);
     index = 1;
@@ -164,7 +165,6 @@ namespace domp {
       index++;
     }
     delete (requests);
-    commandManager->ReInitialize();
     commands_received.clear();
 
     log("MASTER::Starting applying its own commands");
@@ -174,6 +174,7 @@ namespace domp {
     char* buffer = data.first;
     int numRequests = data.second / sizeof(DOMPDataCommand_t);
     requests = new MPI_Request[numRequests];
+    log("Node %d::Data request response received with %d requests.", rank, numRequests);
     for(int i = 0; i < numRequests; i++) {
       auto *command = reinterpret_cast<DOMPDataCommand_t *>(buffer + i *sizeof(DOMPDataCommand_t));
       std::pair<char*, int> ret = dompObject->mapDataRequest(command->varName, command->start, command->size);
@@ -183,7 +184,7 @@ namespace domp {
             command->size, command->tagValue);
         MPI_Irecv(ret.first, ret.second, MPI_BYTE, command->nodeId, command->tagValue, mpi_comm, &requests[i]);
       }
-      else if(command->commandType == MPI_DATA_SEND) {
+      else {
         // Send the Data request to slave nodes. Use already created connection
         log("Node %d::DATASEND Var[%s], start[%d], size[%d], tag[%d]", rank, command->varName, command->start,
             command->size, command->tagValue);
@@ -193,6 +194,9 @@ namespace domp {
 
     MPI_Waitall(numRequests , requests, NULL);
     delete(requests);
+    delete(buffer);
+
+    commandManager->ReInitialize();
 
     log("MASTER::Completed applying its own commands");
     // Synchronization is must here as all nodes should receive and send the shared data

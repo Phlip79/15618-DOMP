@@ -35,9 +35,9 @@ DOMP::DOMP(int *argc, char ***argv) {
 
   MPI_Barrier(MPI_COMM_WORLD);
   if (rank == 0) {
-    dataManager = new MasterDataManager(dompObject, clusterSize, rank);
+    dataManager = new MasterDataManager(this, clusterSize, rank);
   } else {
-    dataManager = new DataManager(dompObject, clusterSize, rank);
+    dataManager = new DataManager(this, clusterSize, rank);
   }
 }
 
@@ -124,17 +124,13 @@ int DOMP::GetClusterSize() {
 }
 
 std::pair<char*, int> DOMP::mapDataRequest(char* varName, int start, int size) {
-  log("NODE:%d::mapDataRequest called for %s", rank, varName);
   std::string key(varName);
-  log("NODE:%d:mapDataRequest called second for %s", rank, varName);
   if (varList.count(key) == 0) {
     log("Node %d:: Variable %s not found", rank, varName);
     MPI_Abort(MPI_COMM_WORLD, DOMP_VAR_NOT_FOUND_ON_NODE);
   }
-  log("NODE:%d::mapDataRequest processing for %s", rank, varName);
 
   Variable *var = varList[key];
-  log("NODE:%d::mapDataRequest processing2 for %s", rank, varName);
   int varSize = sizeof(int);
   auto type = var->getType();
   if (type == MPI_BYTE)  varSize = 1;

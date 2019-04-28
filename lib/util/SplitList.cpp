@@ -109,6 +109,8 @@ namespace domp {
   void SplitList::CreateCommand(CommandManager *commandManager, int destination, Fragment *fragment, char* varName) {
     // Logic from which node to fetch the data. We can distribute it to multiple nodes, if multiple nodes have the data
     int source = *fragment->nodes.begin();
+    log("MASTER:: Created fetch command Var[%s], From[%d] TO[%d], Start[%d], Size[%d]", varName, source, destination,
+        fragment->start, fragment->size);
     commandManager->InsertCommand(varName, fragment->start, fragment->size, source, destination);
   }
 

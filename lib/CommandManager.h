@@ -28,7 +28,7 @@ namespace domp {
 }
 
 class domp::CommandManager {
-  std::map<int, std::list<DOMPDataCommand*>> commandMap;
+  std::map<int, std::list<DOMPDataCommand*>*> commandMap;
   std::map<int, int> tagvalues;
   int clusterSize;
 
