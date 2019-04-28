@@ -17,7 +17,7 @@ namespace domp {
   // that node. In this function, we also perform the splitting.
   void SplitList::ReadPhase(DOMPMapCommand_t *command, CommandManager *commandManager) {
     int start = command->start;
-    int end = command->start + command->size;
+    int end = command->start + command->size - 1;
     int nodeId = command->nodeId;
     MPIAccessType  accessType = command->accessType;
     char* varName = command->varName;
@@ -25,7 +25,7 @@ namespace domp {
     log("READPHASE::Start[%d], End[%d], NodeId[%d], VarName[%s]", start, end, nodeId, varName);
 
     Fragment *current = fragments.begin();
-    while(current != NULL || start > end) {
+    while(current != NULL && start <= end) {
       // Case 1: ||
       if (start > current->end) {
         log("Found Case 1:: Start[%d] End[%d]", start, end);
@@ -117,7 +117,7 @@ namespace domp {
   void SplitList::WritePhase(DOMPMapCommand_t *command) {
     // For write phase, Split should have happened already
     int start = command->start;
-    int end = command->start + command->size;
+    int end = command->start + command->size - 1;
     int nodeId = command->nodeId;
     MPIAccessType  accessType = command->accessType;
     char* varName = command->varName;
