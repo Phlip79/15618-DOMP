@@ -15,7 +15,7 @@ int compute(int total_size) {
   int *arr = new int[total_size];
   int i, offset, size;
 
-  DOMP_REGISTER(arr, MPI_INT);
+  DOMP_REGISTER(arr, MPI_INT, total_size);
   DOMP_PARALLELIZE(total_size, &offset, &size);
 
   DOMP_EXCLUSIVE(arr, offset, size);

@@ -24,6 +24,11 @@ namespace domp {
     delete(this->mapRequest);
   }
 
+  MasterDataManager::~MasterDataManager() {
+    // Free the memory for variables
+    for (std::map<std::string,MasterVariable*>::iterator it=varList.begin(); it!=varList.end(); ++it)
+      delete(it->second);
+  }
 
   void DataManager::requestData(std::string varName, int start, int size, MPIAccessType accessType) {
     // Keep accumulating all data requests. Send it at once in triggerMap function() called when synchronize is called
@@ -133,5 +138,17 @@ namespace domp {
       }
       delete(buffer);
     }
+  }
+
+  void DataManager::registerVariable(std::string varName, Variable *variable) {
+    // Do nothing on regular ndoes
+  }
+
+  void MasterDataManager::registerVariable(std::string varName, Variable *variable) {
+    // Register to your own mapping
+    if (varList.count(varName) != 0) {
+      delete(varList[varName]);
+    }
+    varList[varName] = new MasterVariable(variable->getPtr(), variable->getSize());
   }
 }

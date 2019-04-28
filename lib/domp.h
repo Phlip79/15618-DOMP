@@ -28,11 +28,10 @@ namespace domp {
   class SplitList;
   class DataManager;
   class MasterMPIServer;
+  class MasterVariable;
 
-  void log(const char *fmt, ...);
 
-  template <typename T>
-  class DoublyLinkedList;
+void log(const char *fmt, ...);
   extern DOMP *dompObject;
 
   #define DOMP_INIT(argc, argv) { \
@@ -41,8 +40,8 @@ namespace domp {
 
   #define DOMP_NODE_ID (dompObject->GetRank())
 
-  #define DOMP_REGISTER(var, type) { \
-    dompObject->Register(#var, var, type); \
+  #define DOMP_REGISTER(var, type, size) { \
+    dompObject->Register(#var, var, type, size); \
   }
   #define DOMP_PARALLELIZE(var, offset, size) { \
     dompObject->Parallelize(var, offset, size); \
@@ -71,12 +70,12 @@ namespace domp {
 class domp::DOMP{
   int rank;
   int clusterSize;
-  std::map<std::string, Variable> varList;
+  std::map<std::string, Variable*> varList;
   DataManager *dataManager;
  public:
   DOMP(int * argc, char ***argv);
   ~DOMP();
-  void Register(std::string varName, void* varValue, MPI_Datatype type);
+  void Register(std::string varName, void* varValue, MPI_Datatype type, int size);
   void Parallelize(int totalSize, int *offset, int *size);
   void FirstShared(std::string varName, int offset, int size);
   void Shared(std::string varName, int offset, int size);
@@ -92,50 +91,26 @@ class domp::DOMP{
 
 };
 
-class domp::Fragment {
-  int start;
-  int size;
-  int end;
-  std::set <int> nodes;
-  friend SplitList;
-  friend DoublyLinkedList<Fragment>;
-  Fragment *next;
-  Fragment *prev;
- public:
-  Fragment(int start, int size, int nodeId) {
-    this->start = start;
-    this->size = size;
-    this->end = start + size - 1; // Notice -1
-    next = prev = NULL;
-    this->nodes.insert(nodeId);
-  }
-
-  Fragment(Fragment *from) {
-    this->start = from->start;
-    this->size = from->size;
-    this->end = start + size -  1; // Notice -1
-    next = prev = NULL;
-    this->nodes.insert(from->nodes.begin(), from->nodes.end());
-  }
-
-  void addNode(int nodeId) {
-    this->nodes.insert(nodeId);
-  }
-
-  void update(int start, int end) {
-    this->start = start;
-    this->end = end;
-    this->size = end - start + 1;
-  }
-};
-
 class domp::Variable {
   void *ptr;
-  DoublyLinkedList<Fragment> fragments;
+  MPI_Datatype type;
+  int size;
  public:
-  Variable(void * ptr) {
+  Variable(void * ptr, MPI_Datatype type, int size) {
     this->ptr = ptr;
+    this->type = type;
+    this->size = size;
+  }
+  void *getPtr() const {
+    return ptr;
+  }
+  const MPI_Datatype &getType() const {
+    return type;
+  }
+  int getSize() const {
+    return size;
   }
 };
+
 
 #endif //DOMP_DOMP_H

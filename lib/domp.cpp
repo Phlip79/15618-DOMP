@@ -45,6 +45,10 @@ DOMP::~DOMP() {
   log("Node %d destructor called", rank);
   delete(dataManager);
 
+  // Free the memory for variables
+  for (std::map<std::string,Variable*>::iterator it=varList.begin(); it!=varList.end(); ++it)
+    delete(it->second);
+
   MPI_Finalize();
 }
 
@@ -71,8 +75,14 @@ void DOMP::FirstShared(std::string varName, int offset, int size) {
 
 }
 
-void DOMP::Register(std::string varName, void *varValue, MPI_Datatype type) {
-
+void DOMP::Register(std::string varName, void *varValue, MPI_Datatype type, int size) {
+  if (varList.count(varName) != 0) {
+    delete(varList[varName]);
+  }
+  varList[varName] =  new Variable(varValue, type, size);
+  if (IsMaster()) {
+    dataManager->registerVariable(varName, varList[varName]);
+  }
 }
 
 void DOMP::Shared(std::string varName, int offset, int size) {
