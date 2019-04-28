@@ -11,6 +11,7 @@ using namespace domp;
 using namespace std;
 
 int compute(int total_size) {
+  std::cout<<DOMP_NODE_ID<<" starting function"<<std::endl;
   int *arr = new int[total_size];
   int i, offset, size;
 
@@ -21,6 +22,7 @@ int compute(int total_size) {
   DOMP_SYNC;
   int sum = 0;
 
+  std::cout<<DOMP_NODE_ID<<" starting computation"<<std::endl;
   #pragma omp parallel
   {
     // Basic initialization of array
@@ -32,8 +34,9 @@ int compute(int total_size) {
       for(i=offset; i < (offset + size); i++) {
         sum += arr[i];
       }
-    }
-    sum = DOMP_REDUCE(sum, MPI_INT, MPI_SUM);
+   }
+  std::cout<<DOMP_NODE_ID<<" Calling reduce now"<<std::endl;
+  sum = DOMP_REDUCE(sum, MPI_INT, MPI_SUM);
   return sum;
 }
 
@@ -42,9 +45,11 @@ int main(int argc, char **argv) {
   int sum = compute(200);
 
   if(DOMP_IS_MASTER) {
-    std::cout << "Hello the total sum is " << sum << std::endl;
+    std::cout << "Hello the total sum is " << sum <<std::endl;
+  } else {
+    std::cout<<DOMP_NODE_ID<<" returned"<<std::endl;
   }
-  DOMP_FINALIZE()
+  DOMP_FINALIZE();
   return 0;
 }
 

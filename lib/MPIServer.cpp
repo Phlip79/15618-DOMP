@@ -71,6 +71,7 @@ namespace domp {
     // Inform the PROBE to finish using EXIT CMD
     MPI_Send(NULL, 0, MPI_BYTE, rank, MPI_EXIT_CMD, MPI_COMM_WORLD);
     std::unique_lock<std::mutex> lck(dataMtx);
+    log("Node %d MPI sent exit request\n", rank);
     // Wait for server to notify that it exited. It is required otherwise MPI_Finalize will cause errors
     exitCondv.wait(lck, [this]{return !serverRunning;});
     log("Node %d MPI received exit ack\n", rank);

@@ -112,12 +112,19 @@ int DOMP::Reduce(std::string varName, void *address, MPI_Datatype type, MPI_Op o
 }
 
 void DOMP::Synchronize() {
+  log("Node %d calling sync",rank);
+  MPI_Barrier(MPI_COMM_WORLD);
+  log("Node %d returned sync",rank);
 
 }
 
 bool DOMP::IsMaster() {
   if (rank == 0) return true;
   else return false;
+}
+
+int DOMP::GetRank() {
+  return rank;
 }
 
 std::pair<void *, int> DOMP::mapDataRequest(std::string varName, int start, int size) {

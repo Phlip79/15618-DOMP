@@ -38,6 +38,9 @@ namespace domp {
   #define DOMP_INIT(argc, argv) { \
     dompObject = new DOMP(argc, argv); \
   }
+
+  #define DOMP_NODE_ID (dompObject->GetRank())
+
   #define DOMP_REGISTER(var, type) { \
     dompObject->Register(#var, var, type); \
   }
@@ -82,6 +85,7 @@ class domp::DOMP{
   int Reduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op);
   void Synchronize();
   bool IsMaster();
+  int GetRank();
 
   // These functions are used by MPIServer
   std::pair<void *, int> mapDataRequest(std::string varName, int start, int size);
