@@ -118,21 +118,55 @@ namespace domp {
     std::list<DOMPMapCommand_t>::iterator commandIterator;
     for(commandIterator = commands_received.begin(); commandIterator != commands_received.end(); commandIterator++) {
       DOMPMapCommand_t command = *commandIterator;
+      log("MASTER applying command from nodeId %d", command.nodeId);
       MasterVariable *masterVariable = varList[command.varName];
       masterVariable->applyCommand(commandManager, &command);
     }
+
+    log("MASTER finished applying commands");
 
     int index = 1;
     MPI_Request *requests = new MPI_Request[clusterSize - 1];
     while (index != clusterSize) {
       std::pair<char*, int> data = commandManager->GetCommands(index);
+      log("MASTER sending commands for size %d to nodeId %d", data.second/sizeof(DOMPDataCommand_t), index);
       MPI_Isend(data.first, data.second, MPI_BYTE, index, MPI_MAP_RESP, mpi_comm, &requests[index-1]);
       index++;
     }
     MPI_Waitall(clusterSize - 1 , requests, NULL);
-    // Process the commands for master node
 
+    index = 1;
+    while (index != clusterSize) {
+      std::pair<char*, int> data = commandManager->GetCommands(index);
+      // Release the buffer
+      delete(data.first);
+      index++;
+    }
+    delete (requests);
     commandManager->ReInitialize();
+    commands_received.clear();
+
+    // Process the commands for master node
+    std::pair<char*, int> data = commandManager->GetCommands(rank);
+    char* buffer = data.first;
+    int numRequests = data.second / sizeof(DOMPDataCommand_t);
+    requests = new MPI_Request[numRequests];
+    for(int i = 0; i < numRequests; i++) {
+      auto *command = reinterpret_cast<DOMPDataCommand_t *>(buffer + i *sizeof(DOMPDataCommand_t));
+      std::pair<void*, int> ret = dompObject->mapDataRequest(command->varName, command->start, command->size);
+      if (command->commandType == MPI_DATA_FETCH) {
+        // Wait for the data to receive
+        MPI_Irecv(ret.first, ret.second, MPI_BYTE, command->nodeId, command->tagValue, mpi_comm, &requests[i]);
+      }
+      else if(command->commandType == MPI_DATA_SEND) {
+        // Send the Data request to slave nodes. Use already created connection
+        MPI_Isend(ret.first, ret.second, MPI_BYTE, command->nodeId, command->tagValue, mpi_comm, &requests[i]);
+      }
+    }
+
+    MPI_Waitall(numRequests , requests, NULL);
+    delete(requests);
+
     // Synchronization is must here as all nodes should receive and send the shared data
     MPI_Barrier(MPI_COMM_WORLD);
   }
