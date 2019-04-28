@@ -69,28 +69,31 @@ void DOMP::Parallelize(int totalSize, int *offset, int *size) {
   }
   *offset = startOffset;
   *size = perNode;
+
+  log("Node %d::Parallelize returned with Offset[%d], Size[%d], TotalSize[%d]", rank, *offset, *size, totalSize);
+
 }
 
 void DOMP::FirstShared(std::string varName, int offset, int size) {
-
+  dataManager->requestData(varName, offset, size, MPI_SHARED_FIRST);
 }
 
 void DOMP::Register(std::string varName, void *varValue, MPI_Datatype type, int size) {
   if (varList.count(varName) != 0) {
     delete(varList[varName]);
   }
-  varList[varName] =  new Variable(varValue, type, size);
+  varList[varName] =  new Variable((char*)varValue, type, size);
   if (IsMaster()) {
     dataManager->registerVariable(varName, varList[varName]);
   }
 }
 
 void DOMP::Shared(std::string varName, int offset, int size) {
-
+  dataManager->requestData(varName, offset, size, MPI_EXCLUSIVE_FETCH);
 }
 
 void DOMP::Exclusive(std::string varName, int offset, int size) {
-
+  dataManager->requestData(varName, offset, size, MPI_EXCLUSIVE_FIRST);
 }
 
 int DOMP::Reduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op) {
@@ -116,10 +119,24 @@ int DOMP::GetRank() {
   return rank;
 }
 
-std::pair<void *, int> DOMP::mapDataRequest(std::string varName, int start, int size) {
+std::pair<char*, int> DOMP::mapDataRequest(char* varName, int start, int size) {
   // TODO bookkeeping
-  int a;
-  return std::make_pair((void *) &a, 0);
+  if (varList.count(varName) == 0) {
+    log("Node %s:: Variable %s not found", rank, varName);
+    MPI_Abort(MPI_COMM_WORLD, DOMP_VAR_NOT_FOUND_ON_NODE);
+  }
+
+  Variable *var = varList[std::string(varName)];
+  int varSize = sizeof(int);
+  auto type = var->getType();
+  if (type == MPI_BYTE)  varSize = 1;
+  else if (type == MPI_FLOAT)  varSize = sizeof(float);
+  else if (type == MPI_DOUBLE)  varSize = sizeof(double);
+  else varSize = sizeof(char);
+
+  int offset = start * varSize;
+  char *address = var->getPtr();
+  return std::make_pair(address, offset);
 }
 
 }

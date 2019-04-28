@@ -9,6 +9,8 @@
 #include <map>
 #include <string>
 
+#include "domp.h"
+
 using namespace std;
 
 namespace domp {
@@ -16,17 +18,13 @@ namespace domp {
   class DOMPDataCommand;
 
   enum MPIAccessType {MPI_SHARED_FETCH= 0, MPI_EXCLUSIVE_FETCH, MPI_SHARED_FIRST, MPI_EXCLUSIVE_FIRST};
-
-
   typedef struct DOMPMapCommand {
-      std::string varName;
+      char varName[DOMP_MAX_VAR_NAME];
       int start;
       int size;
       MPIAccessType accessType;
       int nodeId;
     } DOMPMapCommand_t;
-
-
 }
 
 class domp::CommandManager {
@@ -38,7 +36,7 @@ class domp::CommandManager {
   CommandManager(int clusterSize);
   ~CommandManager();
   std::pair<char *, int> GetCommands(int rank);
-  void InsertCommand(std::string varName, int start, int size, int source, int destination);
+  void InsertCommand(char* varName, int start, int size, int source, int destination);
   void ReInitialize();
 };
 

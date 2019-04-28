@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include "SplitList.h"
+#include "../domp.h"
 
 using namespace std;
 
@@ -19,17 +20,21 @@ namespace domp {
     int end = command->start + command->size;
     int nodeId = command->nodeId;
     MPIAccessType  accessType = command->accessType;
-    std::string varName = command->varName;
+    char* varName = command->varName;
+
+    log("READPHASE::Start[%d], End[%d], NodeId[%d], VarName[%s]", start, end, nodeId, varName);
 
     Fragment *current = fragments.begin();
     while(current != NULL || start > end) {
       // Case 1: ||
       if (start > current->end) {
+        log("Found Case 1:: Start[%d] End[%d]", start, end);
         current = current->next;
         continue;
       }
       // Case 2: |X||
       if (start == current->start && end < current->end) {
+        log("Found Case 2:: Start[%d] End[%d]", start, end);
         auto nextNode = Split(current, end, nodeId, SPLIT_ACCESS(accessType), USE_FIRST);
         if (nextNode != NULL && IS_FETCH(accessType)) {
           CreateCommand(commandManager, nodeId, current, varName);
@@ -39,6 +44,7 @@ namespace domp {
       // Case 3: ||X|
       else if (start > current->start && end >= current->end) {
         // Same case for both Exclusive fetch and shared fetch
+        log("Found Case 3:: Start[%d] End[%d]", start, end);
         auto nextNode = Split(current, end, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
         if (nextNode != NULL && IS_FETCH(accessType)) {
           CreateCommand(commandManager, nodeId, nextNode, varName);
@@ -53,6 +59,7 @@ namespace domp {
         // Same case for both Exclusive fetch and shared fetch
         // We need to Split twice
         // First Split using second
+        log("Found Case 4:: Start[%d] End[%d]", start, end);
         auto nextNode = Split(current, start, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
         if (nextNode != NULL) {
           // Second Split using first. See last argument as true here.
@@ -65,6 +72,7 @@ namespace domp {
       }
       // Case 5: |X|
       else if (start == current->start && end >= current->end) {
+        log("Found Case 5:: Start[%d] End[%d]", start, end);
         if (current->nodes.count(nodeId) == 0) {
           if (IS_FETCH(accessType)) {
             CreateCommand(commandManager, nodeId, current, varName);
@@ -75,6 +83,8 @@ namespace domp {
       }
       current = current->next;
     }
+
+    log("READPHASE finished::Start[%d], End[%d], NodeId[%d], VarName[%s]", start, end, nodeId, varName);
   }
 
 
@@ -96,8 +106,7 @@ namespace domp {
     return fragment;
   }
 
-  void SplitList::CreateCommand(CommandManager *commandManager, int destination, Fragment *fragment, std::string
-  varName) {
+  void SplitList::CreateCommand(CommandManager *commandManager, int destination, Fragment *fragment, char* varName) {
     // Logic from which node to fetch the data. We can distribute it to multiple nodes, if multiple nodes have the data
     int source = *fragment->nodes.begin();
     commandManager->InsertCommand(varName, fragment->start, fragment->size, source, destination);
@@ -111,8 +120,10 @@ namespace domp {
     int end = command->start + command->size;
     int nodeId = command->nodeId;
     MPIAccessType  accessType = command->accessType;
-    std::string varName = command->varName;
+    char* varName = command->varName;
     std::list<DOMPMapCommand_t*> commands;
+
+    log("WritePhase::Start[%d], End[%d], NodeId[%d], VarName[%s]", start, end, nodeId, varName);
 
     Fragment *current = fragments.begin();
     while(current != NULL && start <= end) {
@@ -133,5 +144,7 @@ namespace domp {
       }
       current = current->next;
     }
+
+    log("WritePhase finished::Start[%d], End[%d], NodeId[%d], VarName[%s]", start, end, nodeId, varName);
   }
 };

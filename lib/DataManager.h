@@ -34,26 +34,20 @@ namespace domp {
   enum MPICommandType {MPI_DATA_FETCH = 0, MPI_DATA_SEND};
 
   typedef struct DOMPDataCommand {
-    std::string varName;
+    char varName[DOMP_MAX_VAR_NAME];
     int start;
     int size;
     int nodeId;
     int tagValue;
     MPICommandType commandType;
   } DOMPDataCommand_t;
-
-  typedef struct DOMPMapRequest {
-    int count;
-    std::list <DOMPMapCommand_t> commands;
-  } DOMPMapRequest_t;
-
 }
 
 class domp::DataManager {
  protected:
   int clusterSize;
   int rank;
-  DOMPMapRequest_t *mapRequest;
+  std::list<DOMPMapCommand_t*> mapRequest;
   DOMP *dompObject;
   MPI_Comm mpi_comm;
 
@@ -68,7 +62,7 @@ class domp::DataManager {
 };
 
 class domp::MasterDataManager : public domp::DataManager {
-  std::list<DOMPMapCommand_t> commands_received;
+  std::list<DOMPMapCommand_t*> commands_received;
   std::map<std::string, MasterVariable*> varList;
   CommandManager *commandManager;
 

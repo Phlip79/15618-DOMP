@@ -8,7 +8,6 @@
 #include "CommandManager.h"
 #include <mpi.h>
 #include <thread>
-
 using namespace domp;
 namespace domp {
 
@@ -16,13 +15,11 @@ namespace domp {
     this->dompObject = dompObject;
     this->clusterSize = clusterSize;
     this->rank = rank;
-    this->mapRequest = new DOMPMapRequest_t();
     MPI_Comm_dup(MPI_COMM_WORLD, &mpi_comm);
   }
 
   DataManager::~DataManager() {
     MPI_Comm_free(&mpi_comm);
-    delete(this->mapRequest);
   }
 
   MasterDataManager::~MasterDataManager() {
@@ -35,13 +32,14 @@ namespace domp {
   void DataManager::requestData(std::string varName, int start, int size, MPIAccessType accessType) {
     // Keep accumulating all data requests. Send it at once in triggerMap function() called when synchronize is called
     // Thread-safety not required. Assuming that caller is calling this function sequentially
-    DOMPMapCommand_t command;
-    command.varName = varName;
-    command.accessType = accessType;
-    command.size = size;
-    command.start = start;
-    command.nodeId = rank;
-    mapRequest->commands.push_back(command);
+    DOMPMapCommand_t* command = new DOMPMapCommand_t();
+    strncpy(command->varName, varName.c_str(), varName.size());
+    command->accessType = accessType;
+    command->size = size;
+    command->start = start;
+    command->nodeId = rank;
+    mapRequest.push_back(command);
+    log("Node %d:: Added request var[%s], start=%d, size=%d", rank, varName.c_str(), start, size);
   }
 
   void DataManager::handleMapResponse(MPI_Status *status) {
@@ -74,19 +72,21 @@ namespace domp {
 
   void DataManager::triggerMap() {
 
-    ssize_t  size = mapRequest->commands.size() * sizeof(DOMPMapCommand_t);
+    ssize_t  size = mapRequest.size() * sizeof(DOMPMapCommand_t);
     char buffer[size];
 
-    std::list<DOMPMapCommand_t>::iterator it;
+    std::list<DOMPMapCommand_t*>::iterator it;
     int i = 0;
-    for (it = mapRequest->commands.begin(); it != mapRequest->commands.end(); ++it){
-      memcpy(&buffer[i * sizeof(DOMPMapCommand_t)], &(*it)  , sizeof(DOMPMapCommand_t));
+    for (it = mapRequest.begin(); it != mapRequest.end(); ++it){
+      DOMPMapCommand_t *cmd = *it;
+      memcpy(&buffer[i * sizeof(DOMPMapCommand_t)], cmd, sizeof(DOMPMapCommand_t));
+      delete(cmd);
     }
 
     // Send the MAP request to Master node always. Use the already created connection
     MPI_Send(buffer, size, MPI_BYTE, 0, MPI_MAP_REQ, mpi_comm);
     // Clear the commands now
-    mapRequest->commands.clear();
+    mapRequest.clear();
 
     MPI_Status status;
     MPI_Probe(0, MPI_MAP_RESP, mpi_comm, &status);
@@ -99,11 +99,12 @@ namespace domp {
 
   void MasterDataManager::triggerMap() {
     // Master node directly pushes its own command to the list
-    std::list<DOMPMapCommand_t>::iterator it;
-    for (it = mapRequest->commands.begin(); it != mapRequest->commands.end(); ++it){
+    std::list<DOMPMapCommand_t*>::iterator it;
+    for (it = mapRequest.begin(); it != mapRequest.end(); ++it){
       commands_received.push_back(*it);
     }
 
+    log("MASTER::Starting receiving requests ");
     // Master doesn't send the request to itself. It waits for a message from all other nodes
     MPI_Status status;
     int requestReceived = 1;
@@ -111,19 +112,26 @@ namespace domp {
       MPI_Probe(MPI_ANY_SOURCE, MPI_MAP_REQ, mpi_comm, &status);
       handleMapRequest(&status);
       requestReceived++;
-      log("MASTER::Data request received from %d", status.MPI_SOURCE);
     }
     // Perform the mapping here
 
-    std::list<DOMPMapCommand_t>::iterator commandIterator;
-    for(commandIterator = commands_received.begin(); commandIterator != commands_received.end(); commandIterator++) {
-      DOMPMapCommand_t command = *commandIterator;
-      log("MASTER applying command from nodeId %d", command.nodeId);
-      MasterVariable *masterVariable = varList[command.varName];
-      masterVariable->applyCommand(commandManager, &command);
+    log("MASTER::Starting applying requests");
+    std::list<DOMPMapCommand_t*>::iterator commandIterator;
+    for(commandIterator = commands_received.begin(); commandIterator != commands_received.end(); ++commandIterator) {
+      log("MASTER::Applying next command");
+      auto command = *commandIterator;
+      if (0 == varList.count(std::string(command->varName))){
+        log("MASTER::Var %s not found", command->varName);
+        MPI_Abort(MPI_COMM_WORLD, DOMP_VAR_NOT_FOUND_ON_MASTER);
+      }
+      log("MASTER::Applying command for nodeId %d", command->nodeId);
+      MasterVariable *masterVariable = varList[command->varName];
+      masterVariable->applyCommand(commandManager, command);
+      log("MASTER::Applying command finished for nodeId %d", command->nodeId);
+      delete(command);
     }
 
-    log("MASTER finished applying commands");
+    log("MASTER::Starting sending commands");
 
     int index = 1;
     MPI_Request *requests = new MPI_Request[clusterSize - 1];
@@ -134,7 +142,6 @@ namespace domp {
       index++;
     }
     MPI_Waitall(clusterSize - 1 , requests, NULL);
-
     index = 1;
     while (index != clusterSize) {
       std::pair<char*, int> data = commandManager->GetCommands(index);
@@ -145,6 +152,8 @@ namespace domp {
     delete (requests);
     commandManager->ReInitialize();
     commands_received.clear();
+
+    log("MASTER::Starting applying its own commands");
 
     // Process the commands for master node
     std::pair<char*, int> data = commandManager->GetCommands(rank);
@@ -167,6 +176,7 @@ namespace domp {
     MPI_Waitall(numRequests , requests, NULL);
     delete(requests);
 
+    log("MASTER::Completed applying its own commands");
     // Synchronization is must here as all nodes should receive and send the shared data
     MPI_Barrier(MPI_COMM_WORLD);
   }
@@ -179,11 +189,15 @@ namespace domp {
       MPI_Recv(buffer, count, MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, mpi_comm, NULL);
       // Now process all requests one at a time
       int numRequests = count / sizeof(DOMPMapCommand_t);
+      log("MASTER::Received %d requests from node %d", numRequests, status->MPI_SOURCE);
       for (int i = 0; i < numRequests; i++) {
-        auto *command = reinterpret_cast<DOMPMapCommand_t *>(buffer + i *sizeof(DOMPMapCommand_t));
-        commands_received.push_back(*command);
+        auto *cmd = new DOMPMapCommand_t();
+        memcpy(cmd, buffer + i *sizeof(DOMPMapCommand_t), sizeof(DOMPMapCommand_t));
+        log("MASTER::Received request from node %d for varName::%s",status->MPI_SOURCE, cmd->varName);
+        commands_received.push_back(cmd);
       }
       delete(buffer);
+      log("MASTER::Added %d requests from node %d", numRequests, status->MPI_SOURCE);
     }
   }
 

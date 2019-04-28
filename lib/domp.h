@@ -21,6 +21,12 @@ namespace domp {
   enum DOMP_TYPE {DOMP_INT, DOMP_FLOAT};
   enum DOMP_REDUCE_OP {DOMP_ADD, DOMP_SUBTRACT};
 
+  enum DOMP_ERROR_MSG {
+    DOMP_VAR_NOT_FOUND_ON_NODE,
+    DOMP_VAR_NOT_FOUND_ON_MASTER
+  };
+
+
   class DOMP;
   class DataManager;
   class Variable;
@@ -80,22 +86,22 @@ class domp::DOMP{
   int GetRank();
 
   // These functions are used by DataManager
-  std::pair<void *, int> mapDataRequest(std::string varName, int start, int size);
+  std::pair<char *, int> mapDataRequest(char* varName, int start, int size);
 
 
 };
 
 class domp::Variable {
-  void *ptr;
+  char *ptr;
   MPI_Datatype type;
   int size;
  public:
-  Variable(void * ptr, MPI_Datatype type, int size) {
+  Variable(char * ptr, MPI_Datatype type, int size) {
     this->ptr = ptr;
     this->type = type;
     this->size = size;
   }
-  void *getPtr() const {
+  char *getPtr() const {
     return ptr;
   }
   const MPI_Datatype &getType() const {

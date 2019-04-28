@@ -36,7 +36,7 @@ namespace domp {
                      int nodeId,
                      SplitListAccessType accessType,
                      SplitListUseNode useNode);
-     void CreateCommand(CommandManager *commandManager, int destination, Fragment *fragment, std::string varName);
+     void CreateCommand(CommandManager *commandManager, int destination, Fragment *fragment, char* varName);
      DoublyLinkedList<Fragment> fragments;
     public:
       SplitList(int start, int size, int nodeId);

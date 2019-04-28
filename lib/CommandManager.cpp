@@ -31,11 +31,12 @@ namespace domp {
     }
     return std::make_pair(nullptr, 0);
   };
-  void CommandManager::InsertCommand(std::string varName, int start, int size, int source, int destination) {
+  void CommandManager::InsertCommand(char* varName, int start, int size, int source, int destination) {
     auto destinationCommand = new DOMPDataCommand_t();
     auto sourceCommand = new DOMPDataCommand_t();
 
-    destinationCommand->varName = sourceCommand->varName = std::move(varName);
+    strncpy(destinationCommand->varName, varName, DOMP_MAX_VAR_NAME);
+    strncpy(sourceCommand->varName, varName, DOMP_MAX_VAR_NAME);
     destinationCommand->size = sourceCommand->size = size;
     destinationCommand->start = sourceCommand->start = start;
     destinationCommand->nodeId = source;
