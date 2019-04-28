@@ -4,8 +4,8 @@ MPICC = mpic++
 DEBUG=1
 CFLAGS=-c -g -O3 -Wall -DDEBUG=$(DEBUG) -std=c++11
 
-SRCS = domp.cpp MPIServer.cpp util/SplitList.cpp util/DoublyLinkedList.cpp
-HFILES = domp.h MPIServer.h util/SplitList.h util/DoublyLinkedList.h
+SRCS = domp.cpp DataManager.cpp util/SplitList.cpp util/DoublyLinkedList.cpp
+HFILES = domp.h DataManager.h util/SplitList.h util/DoublyLinkedList.h
 
 OBJS := ${SRCS:.cpp=.o}
 

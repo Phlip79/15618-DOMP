@@ -7,7 +7,7 @@
 
 #include <list>
 #include "../domp.h"
-#include "../MPIServer.h"
+#include "../DataManager.h"
 
 // One function works for all data types.  This would work
 // even for user defined types if operator '>' is overloaded

@@ -20,8 +20,8 @@ using namespace std;
 namespace domp {
 #define DOMP_MIN_DATA_TAG (100)
 
-  class MPIServer;
-  class MPIMasterServer;
+  class DataManager;
+  class MasterDataManager;
   enum MPIServerTag {MPI_MAP_REQ= 0, MPI_MAP_RESP, MPI_DATA_CMD, MPI_EXIT_CMD, MPI_EXIT_ACK};
   enum MPICommandType {MPI_DATA_FETCH = 0, MPI_DATA_SEND};
   enum MPIAccessType {MPI_SHARED_FETCH= 0, MPI_EXCLUSIVE_FETCH, MPI_SHARED_FIRST, MPI_EXCLUSIVE_FIRST};
@@ -57,7 +57,7 @@ namespace domp {
 
 
 
-class domp::MPIServer {
+class domp::DataManager {
  protected:
   int clusterSize;
   int rank;
@@ -66,23 +66,20 @@ class domp::MPIServer {
   MPI_Comm mpi_comm;
 
  public:
-  MPIServer(DOMP *dompObject, int clusterSize, int rank);
-  virtual ~MPIServer();
+  DataManager(DOMP *dompObject, int clusterSize, int rank);
+  virtual ~DataManager();
   void requestData(std::string varName, int start, int size, MPIAccessType accessType);
   void handleMapResponse(MPI_Status *status);
 
   virtual void triggerMap();
-  virtual void handleMapRequest(MPI_Status *status);
 };
 
 
-class domp::MPIMasterServer : public domp::MPIServer {
-  int mapReceived;
-  std::mutex mappingMtx;
+class domp::MasterDataManager : public domp::DataManager {
   std::list<std::pair<int,DOMPMapCommand_t>> commands_received;
  public:
-  MPIMasterServer(DOMP *dompObject, int size, int rank) :MPIServer(dompObject, size, rank){
-    mapReceived = 0;
+  MasterDataManager(DOMP *dompObject, int size, int rank) :DataManager(dompObject, size, rank){
+
   };
 
   void handleMapRequest(MPI_Status *status);

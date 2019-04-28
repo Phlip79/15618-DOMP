@@ -26,7 +26,7 @@ namespace domp {
   class Variable;
   class Fragment;
   class SplitList;
-  class MPIServer;
+  class DataManager;
   class MasterMPIServer;
 
   void log(const char *fmt, ...);
@@ -72,7 +72,7 @@ class domp::DOMP{
   int rank;
   int clusterSize;
   std::map<std::string, Variable> varList;
-  MPIServer *mpiServer;
+  DataManager *dataManager;
  public:
   DOMP(int * argc, char ***argv);
   ~DOMP();
@@ -86,7 +86,7 @@ class domp::DOMP{
   bool IsMaster();
   int GetRank();
 
-  // These functions are used by MPIServer
+  // These functions are used by DataManager
   std::pair<void *, int> mapDataRequest(std::string varName, int start, int size);
 
 

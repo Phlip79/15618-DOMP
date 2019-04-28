@@ -4,14 +4,14 @@
 // Majority of the code hasn been taken from https://www.mpi-forum.org/docs/mpi-3.1/mpi31-report/node248.htm
 //
 
-#include "MPIServer.h"
+#include "DataManager.h"
 #include <mpi.h>
 #include <thread>
 
 using namespace domp;
 namespace domp {
 
-  MPIServer::MPIServer(DOMP *dompObject, int clusterSize, int rank) {
+  DataManager::DataManager(DOMP *dompObject, int clusterSize, int rank) {
     this->dompObject = dompObject;
     this->clusterSize = clusterSize;
     this->rank = rank;
@@ -19,13 +19,13 @@ namespace domp {
     MPI_Comm_dup(MPI_COMM_WORLD, &mpi_comm);
   }
 
-  MPIServer::~MPIServer() {
+  DataManager::~DataManager() {
     MPI_Comm_free(&mpi_comm);
     delete(this->mapRequest);
   }
 
 
-  void MPIServer::requestData(std::string varName, int start, int size, MPIAccessType accessType) {
+  void DataManager::requestData(std::string varName, int start, int size, MPIAccessType accessType) {
     // Keep accumulating all data requests. Send it at once in triggerMap function() called when synchronize is called
     // Thread-safety not required. Assuming that caller is calling this function sequentially
     DOMPMapCommand_t command;
@@ -36,12 +36,13 @@ namespace domp {
     mapRequest->commands.push_back(command);
   }
 
-  void MPIServer::handleMapResponse(MPI_Status *status) {
+  void DataManager::handleMapResponse(MPI_Status *status) {
     if (status->MPI_ERROR == MPI_SUCCESS && status->MPI_SOURCE == 0) {
       int count;
       MPI_Get_count(status, MPI_BYTE, &count);
       auto *buffer = new char[count];
       MPI_Recv(buffer, count, MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, mpi_comm, NULL);
+      log("SLAVE %d::Data request response received.", rank);
       int numRequests = count / sizeof(DOMPMapCommand_t);
       MPI_Request *requests = new MPI_Request[numRequests];
       for(int i = 0; i < numRequests; i++) {
@@ -63,7 +64,7 @@ namespace domp {
     }
   }
 
-  void MPIServer::triggerMap() {
+  void DataManager::triggerMap() {
 
     ssize_t  size = mapRequest->commands.size() * sizeof(DOMPMapCommand_t);
     char buffer[size];
@@ -88,7 +89,7 @@ namespace domp {
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
-  void MPIMasterServer::triggerMap() {
+  void MasterDataManager::triggerMap() {
     // Master node directly pushes its own command to the list
     std::list<DOMPMapCommand_t>::iterator it;
     for (it = mapRequest->commands.begin(); it != mapRequest->commands.end(); ++it){
@@ -102,19 +103,23 @@ namespace domp {
       MPI_Probe(MPI_ANY_SOURCE, MPI_MAP_REQ, mpi_comm, &status);
       handleMapRequest(&status);
       requestReceived++;
+      log("MASTER::Data request received from %d", status.MPI_SOURCE);
     }
     // Perform the mapping here
 
 
+    int requestSent = 1;
+    MPI_Request *requests = new MPI_Request[clusterSize - 1];
+    while (requestSent != clusterSize) {
+      MPI_Isend(NULL, 0, MPI_BYTE, requestSent, MPI_MAP_RESP, mpi_comm, &requests[requestSent-1]);
+      requestSent++;
+    }
+    MPI_Waitall(clusterSize - 1 , requests, NULL);
     // Synchronization is must here as all nodes should receive and send the shared data
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
-  void MPIServer::handleMapRequest(MPI_Status* status) {
-    // Do nothing
-  }
-
-  void MPIMasterServer::handleMapRequest(MPI_Status* status) {
+  void MasterDataManager::handleMapRequest(MPI_Status* status) {
     if (status->MPI_ERROR == MPI_SUCCESS) {
       int count;
       MPI_Get_count(status, MPI_BYTE, &count);

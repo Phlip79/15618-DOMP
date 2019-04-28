@@ -5,7 +5,7 @@
 #include <mpi.h>
 #include <stdlib.h>
 #include "domp.h"
-#include "MPIServer.h"
+#include "DataManager.h"
 
 //void debug_printf(char )
 
@@ -35,15 +35,15 @@ DOMP::DOMP(int *argc, char ***argv) {
 
   MPI_Barrier(MPI_COMM_WORLD);
   if (rank == 0) {
-    mpiServer = new MPIMasterServer(dompObject, clusterSize, rank);
+    dataManager = new MasterDataManager(dompObject, clusterSize, rank);
   } else {
-    mpiServer = new MPIServer(dompObject, clusterSize, rank);
+    dataManager = new DataManager(dompObject, clusterSize, rank);
   }
 }
 
 DOMP::~DOMP() {
   log("Node %d destructor called", rank);
-  delete(mpiServer);
+  delete(dataManager);
 
   MPI_Finalize();
 }
@@ -93,9 +93,8 @@ int DOMP::Reduce(std::string varName, void *address, MPI_Datatype type, MPI_Op o
 
 void DOMP::Synchronize() {
   log("Node %d calling sync",rank);
-  MPI_Barrier(MPI_COMM_WORLD);
+  dataManager->triggerMap();
   log("Node %d returned sync",rank);
-
 }
 
 bool DOMP::IsMaster() {
