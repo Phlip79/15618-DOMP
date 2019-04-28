@@ -65,17 +65,11 @@ class domp::MPIServer {
   std::condition_variable dataCV;
   std::condition_variable exitCondv;
   bool dataReceived;
+  MPI_Comm mpi_comm;
 
 
  public:
-  MPIServer(DOMP *dompObject, char* clusterName, int clusterSize, int rank) {
-    this->dompObject = dompObject;
-    strncpy(this->clusterName, clusterName, DOMP_MAX_CLUSTER_NAME);
-    this->clusterSize = clusterSize;
-    this->rank = rank;
-    this->mapRequest = new DOMPMapRequest_t();
-    nodeConnections = new MPI_Comm[this->rank];
-  }
+  MPIServer(DOMP *dompObject, char* clusterName, int clusterSize, int rank);
   ~MPIServer();
   void startServer();
   void stopServer();

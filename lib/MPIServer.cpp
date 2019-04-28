@@ -11,14 +11,26 @@
 using namespace domp;
 namespace domp {
 
-  MPIServer::~MPIServer() {
+  MPIServer::MPIServer(DOMP *dompObject, char* clusterName, int clusterSize, int rank) {
+    this->dompObject = dompObject;
+    strncpy(this->clusterName, clusterName, DOMP_MAX_CLUSTER_NAME);
+    this->clusterSize = clusterSize;
+    this->rank = rank;
+    this->mapRequest = new DOMPMapRequest_t();
+    nodeConnections = new MPI_Comm[this->rank];
+    MPI_Comm_dup(MPI_COMM_WORLD, &mpi_comm);
   }
+
+  MPIServer::~MPIServer() {
+    MPI_Comm_free(&mpi_comm);
+  }
+
 
   void MPIServer::accept() {
     while (true) {
       log("Node %d waiting for a request\b", rank);
       MPI_Status *status = new MPI_Status();
-      MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, status);
+      MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, mpi_comm, status);
       log("Node %d received a request\b", rank);
       if (status->MPI_TAG == MPI_EXIT_CMD) {
         free(status);
@@ -64,12 +76,12 @@ namespace domp {
   void MPIServer::startServer() {
     serverRunning = true;
     // First start your own server thread
-    serverThread = std::thread(&MPIServer::accept, this);
+     serverThread = std::thread(&MPIServer::accept, this);
   }
 
   void MPIServer::stopServer() {
     // Inform the PROBE to finish using EXIT CMD
-    MPI_Send(NULL, 0, MPI_BYTE, rank, MPI_EXIT_CMD, MPI_COMM_WORLD);
+    MPI_Send(NULL, 0, MPI_BYTE, rank, MPI_EXIT_CMD, mpi_comm);
     std::unique_lock<std::mutex> lck(dataMtx);
     log("Node %d MPI sent exit request\n", rank);
     // Wait for server to notify that it exited. It is required otherwise MPI_Finalize will cause errors
@@ -94,13 +106,13 @@ namespace domp {
       int count;
       MPI_Get_count(status, MPI_BYTE, &count);
       auto *buffer = new char[count];
-      MPI_Recv(buffer, count, MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, MPI_COMM_WORLD, NULL);
+      MPI_Recv(buffer, count, MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, mpi_comm, NULL);
       int requests = count / sizeof(DOMPMapCommand_t);
       int tag = DOMP_MIN_DATA_TAG;
       for(int i = 0; i < requests; i++) {
         auto *command = reinterpret_cast<DOMPMapCommand_t *>(buffer + i *sizeof(DOMPMapCommand_t));
         // Send the Data request to slave nodes. Use already created connection
-        MPI_Isend(command, sizeof(DOMPMapCommand_t), MPI_BYTE, command->nodeId, tag, MPI_COMM_WORLD, NULL);
+        MPI_Isend(command, sizeof(DOMPMapCommand_t), MPI_BYTE, command->nodeId, tag, mpi_comm, NULL);
         // Keep track of all requests
         dataRequests[tag++] = command;
       }
@@ -116,11 +128,11 @@ namespace domp {
   void MPIServer::transferData(MPI_Status *status) {
     if (status->MPI_ERROR == MPI_SUCCESS) {
       DOMPMapCommand_t command;
-      MPI_Recv(&command, sizeof(DOMPMapCommand_t), MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, MPI_COMM_WORLD, NULL);
+      MPI_Recv(&command, sizeof(DOMPMapCommand_t), MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, mpi_comm, NULL);
       std::pair<void*, int> ret = dompObject->mapDataRequest(command.varName, command.start, command.size);
       auto buffer = ret.first;
       // Someone requested data from me. Read and send the data to the specified node
-      MPI_Send(buffer, ret.second, MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, MPI_COMM_WORLD);
+      MPI_Send(buffer, ret.second, MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, mpi_comm);
     }
   }
 
@@ -145,7 +157,7 @@ namespace domp {
       // Wait for the data transfer to finish
       if (command != NULL) {
         std::pair<void *, int> ret = dompObject->mapDataRequest(command->varName, command->start, command->size);
-        MPI_Recv(ret.first, ret.second, MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, MPI_COMM_WORLD, NULL);
+        MPI_Recv(ret.first, ret.second, MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, mpi_comm, NULL);
         // Now let the main thread know that we have received all data
         if (isLastReceived) dataReceived = true;
         dataCV.notify_all();
@@ -165,7 +177,7 @@ namespace domp {
     }
 
     // Send the MAP request to Master node always. Use the already created connection
-    MPI_Send(buffer, size, MPI_BYTE, 0, MPI_MAP_REQ, MPI_COMM_WORLD);
+    MPI_Send(buffer, size, MPI_BYTE, 0, MPI_MAP_REQ, mpi_comm);
     // Clear the commands now
     mapRequest->commands.clear();
     // Wait for the data transfer to finish
@@ -181,7 +193,7 @@ namespace domp {
       int count;
       MPI_Get_count(status, MPI_BYTE, &count);
       char *buffer = new char[count];
-      MPI_Recv(buffer, count, MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, MPI_COMM_WORLD, NULL);
+      MPI_Recv(buffer, count, MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, mpi_comm, NULL);
       commands_received.push_back(std::make_pair(status->MPI_SOURCE,(DOMPMapCommand_t*)buffer));
 
       mappingMtx.lock();

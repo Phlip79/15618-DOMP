@@ -52,6 +52,7 @@ DOMP::DOMP(int *argc, char ***argv) {
 
   log("My rank=%d, size=%d, ClusterName=%s, provided support=%d\n", rank, clusterSize, clusterName, provided);
 
+  MPI_Barrier(MPI_COMM_WORLD);
   if (rank == 0) {
     mpiServer = new MPIMasterServer(dompObject, clusterName, clusterSize, rank);
   } else {
