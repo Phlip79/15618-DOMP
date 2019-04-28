@@ -6,13 +6,16 @@ LDFLAGS= -lm
 
 DOMP_LIB = lib/domplib.a
 
-all: arraySum
+all: arraySum testDataTransfer
 
 DOMP_LIB:
 	(cd lib; make)
 
 arraySum: DOMP_LIB tests/arraySum.cpp
 	$(CC) $(CFLAGS) $(OMP) -o build/arraySum tests/arraySum.cpp $(DOMP_LIB) $(LDFLAGS)
+
+testDataTransfer: DOMP_LIB tests/testDataTransfer.cpp
+	$(CC) $(CFLAGS) $(OMP) -o build/testDataTransfer tests/testDataTransfer.cpp $(DOMP_LIB) $(LDFLAGS)
 
 clean:
 	rm -rf build/*.o

@@ -39,6 +39,7 @@ void log(const char *fmt, ...);
   }
 
   #define DOMP_NODE_ID (dompObject->GetRank())
+  #define DOMP_CLUSTER_SIZE (dompObject->GetClusterSize())
 
   #define DOMP_REGISTER(var, type, size) { \
     dompObject->Register(#var, var, type, size); \
@@ -84,6 +85,7 @@ class domp::DOMP{
   void Synchronize();
   bool IsMaster();
   int GetRank();
+  int GetClusterSize();
 
   // These functions are used by DataManager
   std::pair<char *, int> mapDataRequest(char* varName, int start, int size);

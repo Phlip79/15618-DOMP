@@ -74,10 +74,6 @@ void DOMP::Parallelize(int totalSize, int *offset, int *size) {
 
 }
 
-void DOMP::FirstShared(std::string varName, int offset, int size) {
-  dataManager->requestData(varName, offset, size, MPI_SHARED_FIRST);
-}
-
 void DOMP::Register(std::string varName, void *varValue, MPI_Datatype type, int size) {
   if (varList.count(varName) != 0) {
     delete(varList[varName]);
@@ -86,6 +82,10 @@ void DOMP::Register(std::string varName, void *varValue, MPI_Datatype type, int 
   if (IsMaster()) {
     dataManager->registerVariable(varName, varList[varName]);
   }
+}
+
+void DOMP::FirstShared(std::string varName, int offset, int size) {
+  dataManager->requestData(varName, offset, size, MPI_SHARED_FIRST);
 }
 
 void DOMP::Shared(std::string varName, int offset, int size) {
@@ -117,6 +117,10 @@ bool DOMP::IsMaster() {
 
 int DOMP::GetRank() {
   return rank;
+}
+
+int DOMP::GetClusterSize() {
+  return clusterSize;
 }
 
 std::pair<char*, int> DOMP::mapDataRequest(char* varName, int start, int size) {

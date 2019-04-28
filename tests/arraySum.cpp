@@ -4,7 +4,6 @@
 #include <iostream>
 
 #include "../lib/domp.h"
-#include <mpi.h>
 #include <omp.h>
 
 using namespace domp;
