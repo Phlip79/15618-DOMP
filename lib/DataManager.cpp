@@ -48,18 +48,24 @@ namespace domp {
       MPI_Get_count(status, MPI_BYTE, &count);
       auto *buffer = new char[count];
       MPI_Recv(buffer, count, MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, mpi_comm, NULL);
-      log("SLAVE %d::Data request response received.", rank);
-      int numRequests = count / sizeof(DOMPMapCommand_t);
+      int numRequests = count / sizeof(DOMPDataCommand_t);
+      log("SLAVE %d::Data request response received with %d requests.", rank, numRequests);
       MPI_Request *requests = new MPI_Request[numRequests];
       for(int i = 0; i < numRequests; i++) {
         auto *command = reinterpret_cast<DOMPDataCommand_t *>(buffer + i *sizeof(DOMPDataCommand_t));
-        std::pair<void*, int> ret = dompObject->mapDataRequest(command->varName, command->start, command->size);
+        log("Node %d::DATA Var[%s], OtherNode[%d], start[%d], size[%d], tag[%d]", rank, command->varName,
+            command->nodeId, command->start, command->size, command->tagValue);
+        std::pair<char*, int> ret = dompObject->mapDataRequest(command->varName, command->start, command->size);
         if (command->commandType == MPI_DATA_FETCH) {
+          log("Node %d::DATAFETCH Var[%s], start[%d], size[%d], tag[%d]", rank, command->varName, command->start,
+              command->size, command->tagValue);
           // Wait for the data to receive
           MPI_Irecv(ret.first, ret.second, MPI_BYTE, command->nodeId, command->tagValue, mpi_comm, &requests[i]);
         }
-        else if(command->commandType == MPI_DATA_SEND) {
+        else {
           // Send the Data request to slave nodes. Use already created connection
+          log("Node %d::DATASEND Var[%s], start[%d], size[%d], tag[%d]", rank, command->varName, command->start,
+              command->size, command->tagValue);
           MPI_Isend(ret.first, ret.second, MPI_BYTE, command->nodeId, command->tagValue, mpi_comm, &requests[i]);
         }
       }
@@ -170,13 +176,17 @@ namespace domp {
     requests = new MPI_Request[numRequests];
     for(int i = 0; i < numRequests; i++) {
       auto *command = reinterpret_cast<DOMPDataCommand_t *>(buffer + i *sizeof(DOMPDataCommand_t));
-      std::pair<void*, int> ret = dompObject->mapDataRequest(command->varName, command->start, command->size);
+      std::pair<char*, int> ret = dompObject->mapDataRequest(command->varName, command->start, command->size);
       if (command->commandType == MPI_DATA_FETCH) {
         // Wait for the data to receive
+        log("Node %d::DATAFETCH Var[%s], start[%d], size[%d], tag[%d]", rank, command->varName, command->start,
+            command->size, command->tagValue);
         MPI_Irecv(ret.first, ret.second, MPI_BYTE, command->nodeId, command->tagValue, mpi_comm, &requests[i]);
       }
       else if(command->commandType == MPI_DATA_SEND) {
         // Send the Data request to slave nodes. Use already created connection
+        log("Node %d::DATASEND Var[%s], start[%d], size[%d], tag[%d]", rank, command->varName, command->start,
+            command->size, command->tagValue);
         MPI_Isend(ret.first, ret.second, MPI_BYTE, command->nodeId, command->tagValue, mpi_comm, &requests[i]);
       }
     }
