@@ -11,18 +11,17 @@
 using namespace domp;
 namespace domp {
 
-  MPIServer::MPIServer(DOMP *dompObject, char* clusterName, int clusterSize, int rank) {
+  MPIServer::MPIServer(DOMP *dompObject, int clusterSize, int rank) {
     this->dompObject = dompObject;
-    strncpy(this->clusterName, clusterName, DOMP_MAX_CLUSTER_NAME);
     this->clusterSize = clusterSize;
     this->rank = rank;
     this->mapRequest = new DOMPMapRequest_t();
-    nodeConnections = new MPI_Comm[this->rank];
     MPI_Comm_dup(MPI_COMM_WORLD, &mpi_comm);
   }
 
   MPIServer::~MPIServer() {
     MPI_Comm_free(&mpi_comm);
+    delete(this->mapRequest);
   }
 
 
@@ -57,12 +56,15 @@ namespace domp {
           MPI_Isend(ret.first, ret.second, MPI_BYTE, command->nodeId, command->tagValue, mpi_comm, &requests[i]);
         }
       }
+
       MPI_Waitall(numRequests , requests, NULL);
+      delete(buffer);
+      delete(requests);
     }
   }
 
   void MPIServer::triggerMap() {
-    dataReceived = false;
+
     ssize_t  size = mapRequest->commands.size() * sizeof(DOMPMapCommand_t);
     char buffer[size];
 
@@ -87,28 +89,25 @@ namespace domp {
   }
 
   void MPIMasterServer::triggerMap() {
-//    dataReceived = false;
-//    ssize_t  size = mapRequest->commands.size() * sizeof(DOMPMapCommand_t);
-//    char buffer[size];
-//
-//    std::list<DOMPMapCommand_t>::iterator it;
-//    int i = 0;
-//    for (it = mapRequest->commands.begin(); it != mapRequest->commands.end(); ++it){
-//      memcpy(&buffer[i * sizeof(DOMPMapCommand_t)], &(*it)  , sizeof(DOMPMapCommand_t));
-//    }
-//
-//    // Send the MAP request to Master node always. Use the already created connection
-//    MPI_Send(buffer, size, MPI_BYTE, 0, MPI_MAP_REQ, mpi_comm);
-//    // Clear the commands now
-//    mapRequest->commands.clear();
-//
-//    MPI_Status status;
-//    MPI_Probe(0, MPI_MAP_RESP, mpi_comm, &status);
-//
-//    handleMapResponse(&status);
-//
-//    // Synchronization is must here as all nodes should receive and send the shared data
-//    MPI_Barrier(MPI_COMM_WORLD);
+    // Master node directly pushes its own command to the list
+    std::list<DOMPMapCommand_t>::iterator it;
+    for (it = mapRequest->commands.begin(); it != mapRequest->commands.end(); ++it){
+      commands_received.push_back(std::make_pair(rank,*it));
+    }
+
+    // Master doesn't send the request to itself. It waits for a message from all other nodes
+    MPI_Status status;
+    int requestReceived = 1;
+    while (requestReceived != clusterSize) {
+      MPI_Probe(MPI_ANY_SOURCE, MPI_MAP_REQ, mpi_comm, &status);
+      handleMapRequest(&status);
+      requestReceived++;
+    }
+    // Perform the mapping here
+
+
+    // Synchronization is must here as all nodes should receive and send the shared data
+    MPI_Barrier(MPI_COMM_WORLD);
   }
 
   void MPIServer::handleMapRequest(MPI_Status* status) {
@@ -121,18 +120,13 @@ namespace domp {
       MPI_Get_count(status, MPI_BYTE, &count);
       char *buffer = new char[count];
       MPI_Recv(buffer, count, MPI_BYTE, status->MPI_SOURCE, status->MPI_TAG, mpi_comm, NULL);
-      commands_received.push_back(std::make_pair(status->MPI_SOURCE,(DOMPMapCommand_t*)buffer));
-
-      mappingMtx.lock();
-      if (mapReceived == (clusterSize - 1)) {
-        // Respond to all slaves
-        mappingMtx.unlock();
-
-
-      } else {
-        mapReceived ++;
-        mappingMtx.unlock();
+      // Now process all requests one at a time
+      int numRequests = count / sizeof(DOMPMapCommand_t);
+      for (int i = 0; i < numRequests; i++) {
+        auto *command = reinterpret_cast<DOMPMapCommand_t *>(buffer + i *sizeof(DOMPMapCommand_t));
+        commands_received.push_back(std::make_pair(status->MPI_SOURCE,*command));
       }
+      delete(buffer);
     }
   }
 }

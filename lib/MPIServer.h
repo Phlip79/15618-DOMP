@@ -61,26 +61,12 @@ class domp::MPIServer {
  protected:
   int clusterSize;
   int rank;
-  char clusterName[DOMP_MAX_CLUSTER_NAME];
-  char port_name[MPI_MAX_PORT_NAME];
-  std::thread serverThread;
-  MPI_Comm *nodeConnections;
-  void accept();
-  void handleRequest(MPI_Status *status);
   DOMPMapRequest_t *mapRequest;
-  std::map <int, DOMPMapCommand*> dataRequests;
   DOMP *dompObject;
-
-  // Locking and waiting mechanism for slave nodes requesting data
-  std::mutex dataMtx;
-  std::condition_variable dataCV;
-  std::condition_variable exitCondv;
-  bool dataReceived;
   MPI_Comm mpi_comm;
 
-
  public:
-  MPIServer(DOMP *dompObject, char* clusterName, int clusterSize, int rank);
+  MPIServer(DOMP *dompObject, int clusterSize, int rank);
   virtual ~MPIServer();
   void requestData(std::string varName, int start, int size, MPIAccessType accessType);
   void handleMapResponse(MPI_Status *status);
@@ -93,9 +79,9 @@ class domp::MPIServer {
 class domp::MPIMasterServer : public domp::MPIServer {
   int mapReceived;
   std::mutex mappingMtx;
-  std::list<std::pair<int,DOMPMapCommand_t*>> commands_received;
+  std::list<std::pair<int,DOMPMapCommand_t>> commands_received;
  public:
-  MPIMasterServer(DOMP *dompObject, char* clusterName, int size, int rank) :MPIServer(dompObject, clusterName, size, rank){
+  MPIMasterServer(DOMP *dompObject, int size, int rank) :MPIServer(dompObject, size, rank){
     mapReceived = 0;
   };
 

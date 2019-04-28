@@ -23,19 +23,6 @@ void log(const char *fmt, ...) {
 #endif
 }
 
-void gen_random(char *s, const int len) {
-  static const char alphanum[] =
-    "0123456789"
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "abcdefghijklmnopqrstuvwxyz";
-
-  for (int i = 0; i < len; ++i) {
-    s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
-  }
-
-  s[len] = 0;
-}
-
 DOMP::DOMP(int *argc, char ***argv) {
   int provided;
   MPI_Init_thread(argc, argv, MPI_THREAD_MULTIPLE, &provided);
@@ -44,19 +31,13 @@ DOMP::DOMP(int *argc, char ***argv) {
   MPI_Comm_size(MPI_COMM_WORLD, &clusterSize);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  // Generate a random clusterName and broadcast it to all nodes
-  if (rank == 0) {
-    gen_random(clusterName, DOMP_MAX_CLUSTER_NAME - 1);
-  }
-  MPI_Bcast(clusterName, DOMP_MAX_CLUSTER_NAME, MPI_BYTE, 0, MPI_COMM_WORLD);
-
-  log("My rank=%d, size=%d, ClusterName=%s, provided support=%d\n", rank, clusterSize, clusterName, provided);
+  log("My rank=%d, size=%d, provided support=%d\n", rank, clusterSize, provided);
 
   MPI_Barrier(MPI_COMM_WORLD);
   if (rank == 0) {
-    mpiServer = new MPIMasterServer(dompObject, clusterName, clusterSize, rank);
+    mpiServer = new MPIMasterServer(dompObject, clusterSize, rank);
   } else {
-    mpiServer = new MPIServer(dompObject, clusterName, clusterSize, rank);
+    mpiServer = new MPIServer(dompObject, clusterSize, rank);
   }
 }
 

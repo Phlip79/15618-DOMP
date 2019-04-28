@@ -71,7 +71,6 @@ namespace domp {
 class domp::DOMP{
   int rank;
   int clusterSize;
-  char clusterName[DOMP_MAX_CLUSTER_NAME];
   std::map<std::string, Variable> varList;
   MPIServer *mpiServer;
  public:
