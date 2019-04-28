@@ -55,7 +55,7 @@ class domp::DataManager {
   DataManager(DOMP *dompObject, int clusterSize, int rank);
   virtual ~DataManager();
   void requestData(std::string varName, int start, int size, MPIAccessType accessType);
-  void handleMapResponse(MPI_Status *status);
+  void handleMapResponse(char* buffer, int count);
   virtual void registerVariable(std::string varName, Variable *variable);
 
   virtual void triggerMap();

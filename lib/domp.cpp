@@ -79,6 +79,7 @@ void DOMP::Register(std::string varName, void *varValue, MPI_Datatype type, int 
     delete(varList[varName]);
   }
   varList[varName] =  new Variable((char*)varValue, type, size);
+  log("Node %d registered Var[%s] Address[%p]", rank, varName.c_str(), varValue);
   if (IsMaster()) {
     dataManager->registerVariable(varName, varList[varName]);
   }
@@ -139,8 +140,8 @@ std::pair<char*, int> DOMP::mapDataRequest(char* varName, int start, int size) {
   else varSize = sizeof(char);
 
   int offset = start * varSize;
-  char *address = var->getPtr();
-  return std::make_pair(address, offset);
+  char *address = var->getPtr() + offset;
+  return std::make_pair(address, varSize * size);
 }
 
 }

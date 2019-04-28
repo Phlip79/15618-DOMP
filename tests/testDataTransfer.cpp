@@ -39,11 +39,11 @@ void compute(int total_size) {
 #pragma omp parallel
     {
 #pragma omp for reduction(+ : sum)
-      // Array sum
       for (i = offset; i < (offset + size); i++) {
+        // Array sum
         // Add neighbours value to own value
-        int nextOffset = (i + size)%total_size;
-        arr[i] += arr[nextOffset];
+        int nei = (i + size)%total_size;
+        arr[i] += arr[nei];
         sum += arr[i];
       }
     }
@@ -53,15 +53,20 @@ void compute(int total_size) {
       std::cout <<"Sum for iterations "<<it<<" is "<<sum<<std::endl;
     }
   }
+
+  for(i = 0; i < total_size; i++) {
+    printf("Node:%d Index[%d] value[%d]\n", DOMP_NODE_ID, i, arr[i]);
+  }
+
 }
 
 int main(int argc, char **argv) {
   DOMP_INIT(&argc, &argv);
-  int totalSize = 1000;
+  int totalSize = 4;
   if (totalSize % DOMP_CLUSTER_SIZE != 0) {
     std::cout<<"Please run this program with 1000 as modulo of clusterSize"<<std::endl;
   } else {
-    compute(1000);
+    compute(totalSize);
   }
   DOMP_FINALIZE();
   return 0;
