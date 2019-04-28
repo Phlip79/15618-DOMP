@@ -151,4 +151,5 @@ namespace domp {
     }
     varList[varName] = new MasterVariable(variable->getPtr(), variable->getSize());
   }
+
 }

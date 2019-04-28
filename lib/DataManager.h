@@ -14,6 +14,7 @@
 #include <thread>
 #include <condition_variable>
 #include "domp.h"
+#include "util/DoublyLinkedList.h"
 
 using namespace std;
 
@@ -23,11 +24,9 @@ namespace domp {
 
   class DataManager;
   class MasterDataManager;
-  template <typename T>
-  class DoublyLinkedList;
+  class Fragment;
 
-
-  class DoublyLinkedList<domp::Fragment>;
+  template class DoublyLinkedList<Fragment>;
 
   enum MPIServerTag {MPI_MAP_REQ= 0, MPI_MAP_RESP, MPI_DATA_CMD, MPI_EXIT_CMD, MPI_EXIT_ACK};
   enum MPICommandType {MPI_DATA_FETCH = 0, MPI_DATA_SEND};
@@ -147,4 +146,5 @@ class domp::MasterVariable {
     fragments.InsertFront(fragment);
   }
 };
+
 #endif //DOMP_MPISERVER_H

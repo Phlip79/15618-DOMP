@@ -12,7 +12,6 @@
 
 #include <mpi.h>
 #include <stdbool.h>
-#include "util/DoublyLinkedList.h"
 
 namespace domp {
   #define DOMP_MAX_VAR_NAME (50)
