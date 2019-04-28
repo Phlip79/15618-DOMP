@@ -58,12 +58,10 @@ DOMP::DOMP(int *argc, char ***argv) {
   } else {
     mpiServer = new MPIServer(dompObject, clusterName, clusterSize, rank);
   }
-  mpiServer->startServer();
 }
 
 DOMP::~DOMP() {
   log("Node %d destructor called", rank);
-  mpiServer->stopServer();
   delete(mpiServer);
 
   MPI_Finalize();

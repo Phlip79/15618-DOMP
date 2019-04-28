@@ -23,6 +23,7 @@ namespace domp {
   class MPIServer;
   class MPIMasterServer;
   enum MPIServerTag {MPI_MAP_REQ= 0, MPI_MAP_RESP, MPI_DATA_CMD, MPI_EXIT_CMD, MPI_EXIT_ACK};
+  enum MPICommandType {MPI_DATA_FETCH = 0, MPI_DATA_SEND};
   enum MPIAccessType {MPI_SHARED_FETCH= 0, MPI_EXCLUSIVE_FETCH, MPI_SHARED_FIRST, MPI_EXCLUSIVE_FIRST};
 
 #define IS_EXCLUSIVE(e) ((e == MPI_EXCLUSIVE_FETCH) ||(e == MPI_EXCLUSIVE_FIRST))
@@ -36,6 +37,16 @@ namespace domp {
     MPIAccessType accessType;
     int nodeId;
   } DOMPMapCommand_t;
+
+
+  typedef struct DOMPDataCommand {
+    std::string varName;
+    int start;
+    int size;
+    int nodeId;
+    int tagValue;
+    MPICommandType commandType;
+  } DOMPDataCommand_t;
 
   typedef struct DOMPMapRequest {
     int count;
@@ -70,16 +81,12 @@ class domp::MPIServer {
 
  public:
   MPIServer(DOMP *dompObject, char* clusterName, int clusterSize, int rank);
-  ~MPIServer();
-  void startServer();
-  void stopServer();
+  virtual ~MPIServer();
   void requestData(std::string varName, int start, int size, MPIAccessType accessType);
-  void triggerMap();
-  void transferData(MPI_Status *status);
-  void receiveData(MPI_Status *status);
   void handleMapResponse(MPI_Status *status);
-  void handleMapRequest(MPI_Status *status){}
-  bool serverRunning;
+
+  virtual void triggerMap();
+  virtual void handleMapRequest(MPI_Status *status);
 };
 
 
@@ -87,10 +94,12 @@ class domp::MPIMasterServer : public domp::MPIServer {
   int mapReceived;
   std::mutex mappingMtx;
   std::list<std::pair<int,DOMPMapCommand_t*>> commands_received;
-  public:
+ public:
   MPIMasterServer(DOMP *dompObject, char* clusterName, int size, int rank) :MPIServer(dompObject, clusterName, size, rank){
     mapReceived = 0;
   };
+
   void handleMapRequest(MPI_Status *status);
+  void triggerMap();
 };
 #endif //DOMP_MPISERVER_H
