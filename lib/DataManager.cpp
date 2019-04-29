@@ -53,20 +53,20 @@ namespace domp {
             command->nodeId, command->start, command->size, command->tagValue);
         std::pair<char*, int> ret = dompObject->mapDataRequest(command->varName, command->start, command->size);
         if (command->commandType == MPI_DATA_FETCH) {
-          log("Node %d::DATAFETCH Var[%s], start[%d], size[%d], bytes[%d], tag[%d] Address[%p] Node[%d]", rank, command->varName,
-              command->start, command->size, ret.second, command->tagValue, ret.first, command->nodeId);
+          log("Node %d::[%d] DATAFETCH Var[%s], start[%d], size[%d], bytes[%d], tag[%d] Address[%p] Node[%d]", rank, i,
+              command->varName, command->start, command->size, ret.second, command->tagValue, ret.first, command->nodeId);
           // Wait for the data to receive
           MPI_Irecv(ret.first, ret.second, MPI_BYTE, command->nodeId, command->tagValue, mpi_comm, &requests[i]);
         }
         else {
           // Send the Data request to slave nodes. Use already created connection
-          log("Node %d::DATASEND Var[%s], start[%d], size[%d], bytes[%d], tag[%d] Address[%p] Node[%d]", rank, command->varName,
-              command->start, command->size, ret.second, command->tagValue, ret.first, command->nodeId);
+          log("Node %d::[%d] DATASEND Var[%s], start[%d], size[%d], bytes[%d], tag[%d] Address[%p] Node[%d]", rank, i,
+              command->varName, command->start, command->size, ret.second, command->tagValue, ret.first, command->nodeId);
           MPI_Isend(ret.first, ret.second, MPI_BYTE, command->nodeId, command->tagValue, mpi_comm, &requests[i]);
         }
       }
 
-      if(MPI_Waitall(numRequests , requests, status) != MPI_SUCCESS) {
+      if(MPI_Waitall(numRequests , requests, status) == MPI_ERR_IN_STATUS) {
         log("ERROR::Waitall failed");
       }
 
@@ -74,6 +74,9 @@ namespace domp {
         if (status[i].MPI_ERROR != MPI_SUCCESS) {
           log("Command with %d failed with error code %ld", i, status[i].MPI_ERROR);
         }
+        int count;
+        MPI_Get_count(&status[i], MPI_BYTE, &count);
+        log("Node %d::Command with %d count is %d", rank, i, count);
       }
 
       delete(requests);

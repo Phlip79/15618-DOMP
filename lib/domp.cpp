@@ -137,6 +137,7 @@ std::pair<char*, int> DOMP::mapDataRequest(char* varName, int start, int size) {
   if (type == MPI_BYTE)  varSize = 1;
   else if (type == MPI_FLOAT)  varSize = sizeof(float);
   else if (type == MPI_DOUBLE)  varSize = sizeof(double);
+  else if (type == MPI_INT)  varSize = sizeof(int);
   else varSize = sizeof(char);
 
   int offset = start * varSize;
