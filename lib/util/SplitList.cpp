@@ -55,7 +55,7 @@ namespace domp {
       else if (start > current->start && end >= current->end) {
         // Same case for both Exclusive fetch and shared fetch
         log("Found Case 3:: Required[%d, %d] Current[%d, %d]", start, end, current->start, current->end);
-        auto nextNode = Split(current, end, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
+        auto nextNode = Split(current, start - 1, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
         if (nextNode != NULL && IS_FETCH(accessType)) {
           CreateCommand(commandManager, nodeId, nextNode, varName);
           start = nextNode->end + 1;
@@ -70,7 +70,7 @@ namespace domp {
         // We need to Split twice
         // First Split using second
         log("Found Case 4:: Required[%d, %d] Current[%d, %d]", start, end, current->start, current->end);
-        auto nextNode = Split(current, start, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
+        auto nextNode = Split(current, start - 1, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
         if (nextNode != NULL) {
           // Second Split using first. See last argument as true here.
           auto nextNextNode = Split(nextNode, end, nodeId, SPLIT_ACCESS(accessType), USE_FIRST);
