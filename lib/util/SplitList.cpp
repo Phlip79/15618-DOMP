@@ -13,6 +13,16 @@ namespace domp {
     fragments.InsertFront(new Fragment(start, size, nodeId));
   }
 
+  SplitList::~SplitList() {
+    Fragment *current = fragments.begin();
+    while(current != NULL) {
+      Fragment *next = current->next;
+      delete(current);
+      current = next;
+    }
+  }
+
+
   // This is the read phase. This is where we read where data existed in previous phase, so that we can read it from
   // that node. In this function, we also perform the splitting.
   void SplitList::ReadPhase(DOMPMapCommand_t *command, CommandManager *commandManager) {

@@ -40,6 +40,7 @@ namespace domp {
      DoublyLinkedList<Fragment> fragments;
     public:
       SplitList(int start, int size, int nodeId);
+      ~SplitList();
       void ReadPhase(DOMPMapCommand_t *command, CommandManager *commandManager);
       void WritePhase(DOMPMapCommand_t *command);
    };

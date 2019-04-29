@@ -89,6 +89,10 @@ class domp::MasterVariable {
     dataList = new SplitList(0, size, DOMP_INVALID_NODE);
   }
 
+  ~MasterVariable() {
+    delete(dataList);
+  }
+
   void applyCommand(CommandManager *commandManager, DOMPMapCommand_t *command) {
     dataList->ReadPhase(command, commandManager);
     dataList->WritePhase(command);
