@@ -21,7 +21,7 @@ using namespace std;
 
 namespace domp {
 
-#define DOMP_MIN_DATA_TAG (100)
+#define DOMP_MIN_DATA_TAG (10)
 #define DOMP_INVALID_NODE (-1)
 
   class DataManager;
