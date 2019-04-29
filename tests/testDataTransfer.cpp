@@ -54,9 +54,9 @@ void compute(int total_size) {
     }
   }
 
-  for(i = 0; i < total_size; i++) {
-    printf("Node:%d Index[%d] value[%d] Address[%p]\n", DOMP_NODE_ID, i, arr[i], &arr[i]);
-  }
+//  for(i = 0; i < total_size; i++) {
+//    printf("Node:%d Index[%d] value[%d] Address[%p]\n", DOMP_NODE_ID, i, arr[i], &arr[i]);
+//  }
 
 }
 

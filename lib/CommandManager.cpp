@@ -52,11 +52,6 @@ namespace domp {
 
     commandMap[source]->push_back(sourceCommand);
     commandMap[destination]->push_back(destinationCommand);
-
-    if (source ==0 || destination == 0) {
-      log("Inserted commmand for rank 0 and current size is %d");
-    }
-
   }
 
   void CommandManager::ReInitialize() {

@@ -38,13 +38,13 @@ namespace domp {
     while(current != NULL && start <= end) {
       // Case 1: ||
       if (start > current->end) {
-        log("Found Case 1:: Start[%d] End[%d]", start, end);
+        log("Found Case 1:: Required[%d, %d] Current[%d, %d]", start, end, current->start, current->end);
         current = current->next;
         continue;
       }
       // Case 2: |X||
       if (start == current->start && end < current->end) {
-        log("Found Case 2:: Start[%d] End[%d]", start, end);
+        log("Found Case 2:: Required[%d, %d] Current[%d, %d]", start, end, current->start, current->end);
         auto nextNode = Split(current, end, nodeId, SPLIT_ACCESS(accessType), USE_FIRST);
         if (nextNode != NULL && IS_FETCH(accessType)) {
           CreateCommand(commandManager, nodeId, current, varName);
@@ -54,7 +54,7 @@ namespace domp {
       // Case 3: ||X|
       else if (start > current->start && end >= current->end) {
         // Same case for both Exclusive fetch and shared fetch
-        log("Found Case 3:: Start[%d] End[%d]", start, end);
+        log("Found Case 3:: Required[%d, %d] Current[%d, %d]", start, end, current->start, current->end);
         auto nextNode = Split(current, end, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
         if (nextNode != NULL && IS_FETCH(accessType)) {
           CreateCommand(commandManager, nodeId, nextNode, varName);
@@ -69,12 +69,12 @@ namespace domp {
         // Same case for both Exclusive fetch and shared fetch
         // We need to Split twice
         // First Split using second
-        log("Found Case 4:: Start[%d] End[%d]", start, end);
+        log("Found Case 4:: Required[%d, %d] Current[%d, %d]", start, end, current->start, current->end);
         auto nextNode = Split(current, start, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
         if (nextNode != NULL) {
           // Second Split using first. See last argument as true here.
           auto nextNextNode = Split(nextNode, end, nodeId, SPLIT_ACCESS(accessType), USE_FIRST);
-          if (nextNextNode != NULL) {
+          if (nextNextNode != NULL && IS_FETCH(accessType)) {
             CreateCommand(commandManager, nodeId, nextNode, varName);
           }
         }
@@ -82,11 +82,11 @@ namespace domp {
       }
       // Case 5: |X|
       else if (start == current->start && end >= current->end) {
-        log("Found Case 5:: Start[%d] End[%d]", start, end);
+        log("Found Case 5:: Required[%d, %d] Current[%d, %d]", start, end, current->start, current->end);
         if (current->nodes.count(nodeId) == 0) {
           if (IS_FETCH(accessType)) {
             CreateCommand(commandManager, nodeId, current, varName);
-            }
+          }
         }
         // Update start
         start = current->end + 1;
@@ -145,7 +145,10 @@ namespace domp {
         if (IS_EXCLUSIVE(accessType)) {
           current->nodes.clear();
         }
-        current->nodes.insert(nodeId);
+        if (current->nodes.count(nodeId) == 0) {
+          current->nodes.insert(nodeId);
+          log("WritePhase::Inserted New Node for Start[%d], End[%d], NodeId[%d], VarName[%s]", start, end, nodeId, varName);
+        }
         start = current->end + 1;
       }
       else if (start > current->end) {

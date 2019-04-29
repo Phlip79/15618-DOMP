@@ -49,8 +49,6 @@ namespace domp {
       MPI_Status *status = new MPI_Status[numRequests];
       for(int i = 0; i < numRequests; i++) {
         auto *command = reinterpret_cast<DOMPDataCommand_t *>(buffer + i *sizeof(DOMPDataCommand_t));
-        log("Node %d::DATA Var[%s], OtherNode[%d], start[%d], size[%d], tag[%d]", rank, command->varName,
-            command->nodeId, command->start, command->size, command->tagValue);
         std::pair<char*, int> ret = dompObject->mapDataRequest(command->varName, command->start, command->size);
         if (command->commandType == MPI_DATA_FETCH) {
           log("Node %d::[%d] DATAFETCH Var[%s], start[%d], size[%d], bytes[%d], tag[%d] Address[%p] Node[%d]", rank, i,
@@ -74,9 +72,6 @@ namespace domp {
         if (status[i].MPI_ERROR != MPI_SUCCESS) {
           log("Command with %d failed with error code %ld", i, status[i].MPI_ERROR);
         }
-        int count;
-        MPI_Get_count(&status[i], MPI_BYTE, &count);
-        log("Node %d::Command with %d count is %d", rank, i, count);
       }
 
       delete(requests);
@@ -144,7 +139,6 @@ namespace domp {
     log("MASTER::Starting applying requests");
     std::list<DOMPMapCommand_t*>::iterator commandIterator;
     for(commandIterator = commands_received.begin(); commandIterator != commands_received.end(); ++commandIterator) {
-      log("MASTER::Applying next command");
       auto command = *commandIterator;
       if (0 == varList.count(std::string(command->varName))){
         log("MASTER::Variable %s not found", command->varName);
@@ -153,7 +147,6 @@ namespace domp {
       log("MASTER::Applying command for nodeId %d", command->nodeId);
       MasterVariable *masterVariable = varList[command->varName];
       masterVariable->applyCommand(commandManager, command);
-      log("MASTER::Applying command finished for nodeId %d", command->nodeId);
       delete(command);
     }
 
