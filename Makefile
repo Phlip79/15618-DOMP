@@ -31,4 +31,5 @@ kmeans:
 
 clean:
 	rm -rf build/*.o
-	(cd lib; make clean)
+	$(MAKE) -C tests/kmeans clean
+	$(MAKE) -C lib clean

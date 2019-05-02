@@ -45,12 +45,10 @@ OPTFLAGS    = -g -pg #-Wno-int-to-pointer-cast
 INCFLAGS    = -I.
 CFLAGS      = $(OPTFLAGS) $(DFLAGS) $(INCFLAGS)
 LDFLAGS     = $(OPTFLAGS)
-LIBS        =
-
-CC          = gcc
+LIBS        = $(DOMP_LIB)
 
 .c.o:
-	$(CC) $(CFLAGS) -c $<
+	$(MPICC) $(CFLAGS) -c $<
 
 H_FILES     = kmeans.h
 
@@ -66,7 +64,7 @@ $(SEQ_OBJ): $(H_FILES)
 
 seq: seq_main
 seq_main: $(SEQ_OBJ) $(H_FILES)
-	$(CC) $(LDFLAGS) -O2 -o seq_main $(SEQ_OBJ) $(LIBS)
+	$(MPICC) $(LDFLAGS) -O2 -o $(OUTPUT_DIR)/seq_main $(SEQ_OBJ) $(LIBS)
 
 #---------------------------------------------------------------------
 clean:
