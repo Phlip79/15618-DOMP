@@ -2,7 +2,6 @@
 #include <string>
 #include <math.h>
 #include "logisticRegression.h"
-#include "../../lib/domp.h"
 using namespace std;
 
 
@@ -22,6 +21,16 @@ LogisticRegression::LogisticRegression(int size, int in, int out) {
         }
         b[i] = 0;
     }
+
+    W_temp = new double*[n_out];
+    for(int i=0; i<n_out; i++) W_temp[i] = new double[n_in];
+    b_temp = new double[n_out];
+
+    for(int i=0; i<n_out; i++) {
+        for(int j=0; j<n_in; j++) {
+            W_temp[i][j] = 0;
+        }
+        b_temp[i] = 0;
 }
 
 LogisticRegression::~LogisticRegression() {
@@ -31,7 +40,7 @@ LogisticRegression::~LogisticRegression() {
 }
 
 
-void LogisticRegression::train(int *x, int num_col_x, int *y, int num_col_y, double lr) {
+void LogisticRegression::train(int *x, int *y, double lr) {
     double *p_y_given_x = new double[n_out];
     double *dy = new double[n_out];
 
@@ -48,10 +57,10 @@ void LogisticRegression::train(int *x, int num_col_x, int *y, int num_col_y, dou
         dy[i] = y[i] - p_y_given_x[i];
 
         for(int j=0; j<n_in; j++) {
-            W[i][j] += lr * dy[i] * x[j] / N;
+            W_temp[i][j] += lr * dy[i] * x[j] / N;
         }
 
-        b[i] += lr * dy[i] / N;
+        b_temp[i] += lr * dy[i] / N;
     }
     delete[] p_y_given_x;
     delete[] dy;
@@ -96,47 +105,42 @@ void test_lr() {
 
 
     // training data
-    // 6 x 6 matrix
-    int train_X[36] = {
-            1, 1, 1, 0, 0, 0,
-            1, 0, 1, 0, 0, 0,
-            1, 1, 1, 0, 0, 0,
-            0, 0, 1, 1, 1, 0,
-            0, 0, 1, 1, 0, 0,
-            0, 0, 1, 1, 1, 0
+    int train_X[6][6] = {
+            {1, 1, 1, 0, 0, 0},
+            {1, 0, 1, 0, 0, 0},
+            {1, 1, 1, 0, 0, 0},
+            {0, 0, 1, 1, 1, 0},
+            {0, 0, 1, 1, 0, 0},
+            {0, 0, 1, 1, 1, 0}
     };
 
-    // 6 x 2 matrix
-    int train_Y[12] = {
-            1, 0,
-            1, 0,
-            1, 0,
-            0, 1,
-            0, 1,
-            0, 1
+    int train_Y[6][2] = {
+            {1, 0},
+            {1, 0},
+            {1, 0},
+            {0, 1},
+            {0, 1},
+            {0, 1}
     };
+
 
     // construct LogisticRegression
     LogisticRegression classifier(train_N, n_in, n_out);
 
 
-    DOMP_REGISTER(train_X, MPI_INT, 36);
-    DOMP_REGISTER(train_Y, MPI_INT, 12);
-    DOMP_PARALLELIZE(train_N, &offset, &size);
-
     // train online
     for(int epoch=0; epoch<n_epochs; epoch++) {
 
-        DOMP_EXCLUSIVE(train_X, offset, size);
-        DOMP_EXCLUSIVE(train_Y, offset, size);
-        DOMP_SYNC;
-
         for(int i=0; i<train_N; i++) {
-            classifier.train(&train_X[6*i], &train_Y[6*i], learning_rate);
+            classifier.train(train_X[i], train_Y[i], learning_rate);
         }
-        // learning_rate *= 0.95;
 
-        DOMP_REDUCE_ALL();
+        for(int i=0; i<n_out; i++) {
+            for(int j=0; j<n_in; j++) {
+                W[i][j] = W_temp[i][j];
+            }
+            b[i] = b_temp[i];
+        // learning_rate *= 0.95;
     }
 
 

@@ -26,6 +26,9 @@ testDataTransfer: DOMP_LIB tests/testDataTransfer.cpp
 logisticRegression: DOMP_LIB tests/logistic_regression/logisticRegression.cpp
 	$(MPICC) $(CFLAGS) $(OMP) -o build/logisticRegression tests/logistic_regression/logisticRegression.cpp $(DOMP_LIB) $(LDFLAGS)
 
+logisticRegressionSeq: DOMP_LIB tests/logistic_regression/logisticRegressionSeq.cpp
+	$(MPICC) $(CFLAGS) $(OMP) -o build/logisticRegressionSeq tests/logistic_regression/logisticRegressionSeq.cpp $(DOMP_LIB) $(LDFLAGS)
+
 kmeans:
 	$(MAKE) -C tests/kmeans
 
