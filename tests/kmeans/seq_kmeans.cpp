@@ -44,7 +44,10 @@
 #include <stdlib.h>
 
 #include "kmeans.h"
+#include "mpi.h"
+#include "../../lib/domp.h"
 
+using namespace domp;
 
 /*----< euclid_dist_2() >----------------------------------------------------*/
 /* square of Euclid distance between two multi-dimensional points            */
@@ -124,9 +127,17 @@ float* seq_kmeans(float *objects,      /* in: [numObjs * numCoords] */
     newClusters = (float*)  calloc(numClusters * numCoords, sizeof(float));
     assert(newClusters != NULL);
 
+    int offset;
+    int size;
+
+    DOMP_PARALLELIZE(numObjs, &offset, &size);
+    DOMP_SHARED(objects, offset * numCoords, size * numCoords);
+    DOMP_SYNC;
+
     do {
         delta = 0.0;
-        for (i=0; i<numObjs; i++) {
+
+        for (i=offset; i<size; i++) {
             /* find the array index of nestest cluster center */
             index = find_nearest_cluster(numClusters, numCoords, &objects[i * numCoords], clusters);
 
@@ -141,6 +152,10 @@ float* seq_kmeans(float *objects,      /* in: [numObjs * numCoords] */
             for (j=0; j<numCoords; j++)
                 newClusters[index * numCoords + j] += objects[i * numCoords+ j];
         }
+
+        DOMP_ARRAY_REDUCE_ALL(&delta, MPI_FLOAT, MPI_SUM, 0, 1);
+        DOMP_ARRAY_REDUCE_ALL(newClusters, MPI_FLOAT, MPI_SUM, 0, numClusters * numCoords);
+        DOMP_ARRAY_REDUCE_ALL(newClusterSize, MPI_INT, MPI_SUM, 0, numClusters);
 
         /* average the sum and replace old cluster centers with newClusters */
         for (i=0; i<numClusters; i++) {

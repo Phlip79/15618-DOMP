@@ -120,6 +120,11 @@ int main(int argc, char **argv) {
 
     if (is_output_timing) io_timing = wtime();
 
+    // This is for sharing among all nodes
+    DOMP_REGISTER(&numObjs, MPI_INT, 1);
+    DOMP_REGISTER(&numCoords, MPI_INT, 1);
+    DOMP_REGISTER(objects, MPI_FLOAT, numObjs * numCoords);
+
     if(DOMP_IS_MASTER) {
         /* read data points from file ------------------------------------------*/
         objects = file_read(isBinaryFile, filename, &numObjs, &numCoords);
@@ -131,13 +136,9 @@ int main(int argc, char **argv) {
             clustering_timing = timing;
         }
 
-        // This is for sharing among all nodes
-        DOMP_REGISTER(&numObjs, MPI_INT, 1);
-        DOMP_REGISTER(&numCoords, MPI_INT, 1);
-        DOMP_REGISTER(objects, MPI_FLOAT, numObjs * numCoords);
-
         DOMP_EXCLUSIVE(&numCoords, 0, 1);
         DOMP_EXCLUSIVE(&numObjs, 0, 1);
+        DOMP_EXCLUSIVE(objects, 0, numObjs * numCoords);
     }
     // Sync the memory
     DOMP_SYNC
@@ -151,9 +152,7 @@ int main(int argc, char **argv) {
     if (!DOMP_IS_MASTER) {
         objects = (float*) malloc(numObjs * numCoords * sizeof(float));
         assert(objects != NULL);
-        DOMP_SHARED(objects, 0, numObjs * numCoords);
     }
-    DOMP_SYNC
 
     /* start the timer for the core computation -----------------------------*/
     /* membership: the cluster id for each data object */

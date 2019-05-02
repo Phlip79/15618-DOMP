@@ -31,10 +31,11 @@ DOMP::DOMP(int *argc, char ***argv) {
   MPI_Comm_size(MPI_COMM_WORLD, &clusterSize);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  dataBuffer = nullptr;
+  dataBuffer = NULL;
 
   if(void *buffer = std::realloc(dataBuffer, DOMP_BUFFER_INIT_SIZE)) {
-    dataBuffer = static_cast<char *>(buffer);
+    dataBuffer = buffer;
+    log("Buffer returned by realloc is %p", buffer);
     currentBufferSize = DOMP_BUFFER_INIT_SIZE;
   } else {
     currentBufferSize =  0;
@@ -120,23 +121,29 @@ int DOMP::Reduce(std::string varName, void *address, MPI_Datatype type, MPI_Op o
 
 void DOMP::ArrayReduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op, int offset, int size,
                       DOMP_REDUCE_TYPE reduceType) {
+
+  log("Node %d::Called ArrayReduce with address %p", rank, address);
   int varSize = getSizeBytes(type);
   int totalSize =  varSize * size;
   if (totalSize > currentBufferSize) {
+    log("Node %d::Called realloc with pointer %p and required size:%d", rank, dataBuffer, totalSize);
     if(void *buffer = std::realloc(dataBuffer, totalSize)) {
-      dataBuffer = static_cast<char *>(buffer);
+      log("Node %d::After realloc with pointer %p", rank, buffer);
+      dataBuffer = buffer;
       currentBufferSize = totalSize;
     } else {
+      log("Node %d::realloc failed for size %d", rank, totalSize);
       throw std::bad_alloc();
     }
   }
   void *dataPtr = (char*)address + (offset * varSize);
-  log("Node %d calling ArrayReduce on %s",rank, varName.c_str());
+  log("Node %d calling ArrayReduce on %s and address %p, pointer %p",rank, varName.c_str(), dataPtr, dataBuffer);
   if (reduceType == REDUCE_ON_MASTER) {
     MPI_Reduce(dataPtr, dataBuffer, size, type, op, 0, MPI_COMM_WORLD);
   } else {
     MPI_Allreduce(dataPtr, dataBuffer, size, type, op, MPI_COMM_WORLD);
   }
+  memcpy(dataPtr, dataBuffer, totalSize);
   log("Node %d returned ArrayReduce on %s",rank, varName.c_str());
 }
 

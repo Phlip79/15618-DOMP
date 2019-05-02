@@ -83,7 +83,7 @@ class domp::DOMP{
   int clusterSize;
   std::map<std::string, Variable*> varList;
   DataManager *dataManager;
-  char *dataBuffer;
+  void *dataBuffer;
   int currentBufferSize;
 
   int getSizeBytes(const MPI_Datatype &type) const;
