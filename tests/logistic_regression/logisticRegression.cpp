@@ -4,6 +4,7 @@
 #include "logisticRegression.h"
 #include "../../lib/domp.h"
 using namespace std;
+using namespace domp;
 
 
 LogisticRegression::LogisticRegression(int size, int in, int out) {
@@ -31,7 +32,7 @@ LogisticRegression::~LogisticRegression() {
 }
 
 
-void LogisticRegression::train(int *x, int num_col_x, int *y, int num_col_y, double lr) {
+void LogisticRegression::train(int *x, int *y, double lr) {
     double *p_y_given_x = new double[n_out];
     double *dy = new double[n_out];
 
@@ -119,6 +120,7 @@ void test_lr() {
     // construct LogisticRegression
     LogisticRegression classifier(train_N, n_in, n_out);
 
+    int offset, size;
 
     DOMP_REGISTER(train_X, MPI_INT, 36);
     DOMP_REGISTER(train_Y, MPI_INT, 12);
@@ -136,7 +138,7 @@ void test_lr() {
         }
         // learning_rate *= 0.95;
 
-        DOMP_ARRAY_REDUCE_ALL(W[0], MPI_INT, MPI_SUM, 0, n_out);
+        DOMP_ARRAY_REDUCE_ALL(classifier.W[0], MPI_INT, MPI_SUM, 0, n_out);
     }
 
 
