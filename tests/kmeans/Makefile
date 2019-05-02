@@ -47,18 +47,18 @@ CFLAGS      = $(OPTFLAGS) $(DFLAGS) $(INCFLAGS)
 LDFLAGS     = $(OPTFLAGS)
 LIBS        = $(DOMP_LIB)
 
-.c.o:
+.cpp.o:
 	$(MPICC) $(CFLAGS) -c $<
 
 H_FILES     = kmeans.h
 
 #------   sequential version -----------------------------------------
-SEQ_SRC     = seq_main.c   \
-              seq_kmeans.c \
-	      file_io.c    \
-	      wtime.c
+SEQ_SRC     = seq_main.cpp   \
+              seq_kmeans.cpp \
+	      file_io.cpp    \
+	      wtime.cpp
 
-SEQ_OBJ     = $(SEQ_SRC:%.c=%.o)
+SEQ_OBJ     = $(SEQ_SRC:%.cpp=%.o)
 
 $(SEQ_OBJ): $(H_FILES)
 

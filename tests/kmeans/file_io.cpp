@@ -29,12 +29,12 @@
 
 
 /*---< file_read() >---------------------------------------------------------*/
-float** file_read(int   isBinaryFile,  /* flag: 0 or 1 */
+float* file_read(int   isBinaryFile,  /* flag: 0 or 1 */
                   char *filename,      /* input file name */
                   int  *numObjs,       /* no. data objects (local) */
                   int  *numCoords)     /* no. coordinates */
 {
-    float **objects;
+    float *objects;
     int     i, j, len;
     ssize_t numBytesRead;
 
@@ -55,14 +55,9 @@ float** file_read(int   isBinaryFile,  /* flag: 0 or 1 */
 
         /* allocate space for objects[][] and read all objects */
         len = (*numObjs) * (*numCoords);
-        objects    = (float**)malloc((*numObjs) * sizeof(float*));
+        objects = (float*) malloc(len * sizeof(float));
         assert(objects != NULL);
-        objects[0] = (float*) malloc(len * sizeof(float));
-        assert(objects[0] != NULL);
-        for (i=1; i<(*numObjs); i++)
-            objects[i] = objects[i-1] + (*numCoords);
-
-        numBytesRead = read(infile, objects[0], len*sizeof(float));
+        numBytesRead = read(infile, objects, len*sizeof(float));
         assert(numBytesRead == len*sizeof(float));
 
         close(infile);
@@ -122,19 +117,14 @@ float** file_read(int   isBinaryFile,  /* flag: 0 or 1 */
 
         /* allocate space for objects[][] and read all objects */
         len = (*numObjs) * (*numCoords);
-        objects    = (float**)malloc((*numObjs) * sizeof(float*));
+        objects = (float*) malloc(len * sizeof(float));
         assert(objects != NULL);
-        objects[0] = (float*) malloc(len * sizeof(float));
-        assert(objects[0] != NULL);
-        for (i=1; i<(*numObjs); i++)
-            objects[i] = objects[i-1] + (*numCoords);
-
         i = 0;
         /* read all objects */
         while (fgets(line, lineLen, infile) != NULL) {
             if (strtok(line, " \t\n") == NULL) continue;
             for (j=0; j<(*numCoords); j++)
-                objects[i][j] = atof(strtok(NULL, " ,\t\n"));
+                objects[i * (*numCoords) + j] = atof(strtok(NULL, " ,\t\n"));
             i++;
         }
 
@@ -150,7 +140,7 @@ int file_write(char      *filename,     /* input file name */
                int        numClusters,  /* no. clusters */
                int        numObjs,      /* no. data objects */
                int        numCoords,    /* no. coordinates (local) */
-               float    **clusters,     /* [numClusters][numCoords] centers */
+               float     *clusters,     /* [numClusters][numCoords] centers */
                int       *membership)   /* [numObjs] */
 {
     FILE *fptr;
@@ -159,13 +149,12 @@ int file_write(char      *filename,     /* input file name */
 
     /* output: the coordinates of the cluster centres ----------------------*/
     sprintf(outFileName, "%s.cluster_centres", filename);
-    printf("Writing coordinates of K=%d cluster centers to file \"%s\"\n",
-           numClusters, outFileName);
+    printf("Writing coordinates of K=%d cluster centers to file \"%s\"\n", numClusters, outFileName);
     fptr = fopen(outFileName, "w");
     for (i=0; i<numClusters; i++) {
         fprintf(fptr, "%d ", i);
         for (j=0; j<numCoords; j++)
-            fprintf(fptr, "%f ", clusters[i][j]);
+            fprintf(fptr, "%f ", clusters[i * numCoords + j]);
         fprintf(fptr, "\n");
     }
     fclose(fptr);

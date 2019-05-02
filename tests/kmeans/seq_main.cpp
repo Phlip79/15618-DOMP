@@ -49,6 +49,11 @@
 
 int      _debug;
 #include "kmeans.h"
+#include "../../lib/domp.h"
+
+
+using namespace domp;
+using namespace std;
 
 /*---< usage() >------------------------------------------------------------*/
 static void usage(char *argv0, float threshold) {
@@ -75,12 +80,13 @@ int main(int argc, char **argv) {
            int     numClusters, numCoords, numObjs;
            int    *membership;    /* [numObjs] */
            char   *filename;
-           float **objects;       /* [numObjs][numCoords] data objects */
-           float **clusters;      /* [numClusters][numCoords] cluster center */
+           float  *objects;       /* [numObjs * numCoords] data objects */
+           float  *clusters;      /* [numClusters * numCoords] cluster center */
            float   threshold;
            double  timing, io_timing, clustering_timing;
            int     loop_iterations;
 
+    DOMP_INIT(&argc, &argv);
     /* some default values */
     _debug           = 0;
     threshold        = 0.001;
@@ -114,15 +120,38 @@ int main(int argc, char **argv) {
 
     if (is_output_timing) io_timing = wtime();
 
-    /* read data points from file ------------------------------------------*/
-    objects = file_read(isBinaryFile, filename, &numObjs, &numCoords);
-    if (objects == NULL) exit(1);
+    if(DOMP_IS_MASTER) {
+        /* read data points from file ------------------------------------------*/
+        objects = file_read(isBinaryFile, filename, &numObjs, &numCoords);
+        if (objects == NULL) exit(1);
 
-    if (is_output_timing) {
-        timing            = wtime();
-        io_timing         = timing - io_timing;
-        clustering_timing = timing;
+        if (is_output_timing) {
+            timing = wtime();
+            io_timing = timing - io_timing;
+            clustering_timing = timing;
+        }
+
+        // This is for sharing among all nodes
+        DOMP_REGISTER(&numObjs, MPI_INT, 1);
+        DOMP_REGISTER(&numCoords, MPI_INT, 1);
+        DOMP_REGISTER(objects, MPI_FLOAT, numObjs * numCoords);
+
+        DOMP_EXCLUSIVE(&numCoords, 0, 1);
+        DOMP_EXCLUSIVE(&numObjs, 0, 1);
+        DOMP_EXCLUSIVE(objects, 0, numObjs * numCoords);
     }
+    // Sync the memory
+    DOMP_SYNC
+    if (!DOMP_IS_MASTER) {
+        // Slave nodes get the data
+        DOMP_SHARED(&numCoords, 0, 1);
+        DOMP_SHARED(&numObjs, 0, 1);
+        objects = (float*) malloc(numObjs * numCoords * sizeof(float));
+        assert(objects != NULL);
+    }
+    // Sync the data to all slave nodes
+    DOMP_SYNC
+
 
     /* start the timer for the core computation -----------------------------*/
     /* membership: the cluster id for each data object */
@@ -132,24 +161,25 @@ int main(int argc, char **argv) {
     clusters = seq_kmeans(objects, numCoords, numObjs, numClusters, threshold,
                           membership, &loop_iterations);
 
-    free(objects[0]);
     free(objects);
 
-    if (is_output_timing) {
-        timing            = wtime();
-        clustering_timing = timing - clustering_timing;
+    if(DOMP_IS_MASTER) {
+
+        if (is_output_timing) {
+            timing = wtime();
+            clustering_timing = timing - clustering_timing;
+        }
+
+        /* output: the coordinates of the cluster centres ----------------------*/
+        file_write(filename, numClusters, numObjs, numCoords, clusters,
+                   membership);
     }
 
-    /* output: the coordinates of the cluster centres ----------------------*/
-    file_write(filename, numClusters, numObjs, numCoords, clusters,
-               membership);
-
     free(membership);
-    free(clusters[0]);
     free(clusters);
 
     /*---- output performance numbers ---------------------------------------*/
-    if (is_output_timing) {
+    if (DOMP_IS_MASTER && is_output_timing) {
         io_timing += wtime() - timing;
         printf("\nPerforming **** Regular Kmeans (sequential version) ****\n");
 
@@ -165,6 +195,7 @@ int main(int argc, char **argv) {
         printf("Computation timing = %10.4f sec\n", clustering_timing);
     }
 
+    DOMP_FINALIZE();
     return(0);
 }
 
