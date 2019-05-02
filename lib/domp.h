@@ -16,10 +16,12 @@
 namespace domp {
   #define DOMP_MAX_VAR_NAME (50)
   #define DOMP_MAX_CLUSTER_NAME (10)
+  #define DOMP_BUFFER_INIT_SIZE (256)
   #define DOMP_MAX_CLIENT_NAME (DOMP_MAX_CLUSTER_NAME + 10)
 
   enum DOMP_TYPE {DOMP_INT, DOMP_FLOAT};
   enum DOMP_REDUCE_OP {DOMP_ADD, DOMP_SUBTRACT};
+  enum DOMP_REDUCE_TYPE {REDUCE_ON_MASTER, REDUCE_ALL};
 
   enum DOMP_ERROR_MSG {
     DOMP_VAR_NOT_FOUND_ON_NODE,
@@ -60,6 +62,15 @@ void log(const char *fmt, ...);
 
   #define DOMP_REDUCE(var, type, op) (dompObject->Reduce(#var, (void*)&(var), type, op))
 
+  #define DOMP_ARRAY_REDUCE(var, type, op, offset, size) { \
+      dompObject->ArrayReduce(#var, var, type, op, offset, size, REDUCE_ON_MASTER)\
+  }
+
+  #define DOMP_ARRAY_REDUCE_ALL(var, type, op, offset, size) { \
+        dompObject->ArrayReduce(#var, var, type, op, offset, size, REDUCE_ALL) \
+  }
+
+
   #define DOMP_FINALIZE() { \
     delete(dompObject); \
     dompObject = NULL; \
@@ -73,6 +84,10 @@ class domp::DOMP{
   int clusterSize;
   std::map<std::string, Variable*> varList;
   DataManager *dataManager;
+  char *dataBuffer;
+  int currentBufferSize;
+
+  int getSizeBytes(const MPI_Datatype &type) const;
  public:
   DOMP(int * argc, char ***argv);
   ~DOMP();
@@ -89,8 +104,9 @@ class domp::DOMP{
 
   // These functions are used by DataManager
   std::pair<char *, int> mapDataRequest(char* varName, int start, int size);
-
-
+  // For reduction
+  void ArrayReduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op, int offset, int size,
+    DOMP_REDUCE_TYPE reduceType);
 };
 
 class domp::Variable {

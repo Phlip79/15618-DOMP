@@ -31,6 +31,16 @@ DOMP::DOMP(int *argc, char ***argv) {
   MPI_Comm_size(MPI_COMM_WORLD, &clusterSize);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
+  dataBuffer = nullptr;
+
+  if(void *buffer = std::realloc(dataBuffer, DOMP_BUFFER_INIT_SIZE)) {
+    dataBuffer = static_cast<char *>(buffer);
+    currentBufferSize = DOMP_BUFFER_INIT_SIZE;
+  } else {
+    currentBufferSize =  0;
+    throw std::bad_alloc();
+  }
+
   log("My rank=%d, size=%d, provided support=%d\n", rank, clusterSize, provided);
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -45,6 +55,8 @@ DOMP::~DOMP() {
   log("Node %d destructor called", rank);
   delete(dataManager);
 
+  free(dataBuffer);
+  currentBufferSize = 0;
   // Free the memory for variables
   for (std::map<std::string,Variable*>::iterator it=varList.begin(); it!=varList.end(); ++it)
     delete(it->second);
@@ -105,6 +117,29 @@ int DOMP::Reduce(std::string varName, void *address, MPI_Datatype type, MPI_Op o
   return val;
 }
 
+
+void DOMP::ArrayReduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op, int offset, int size,
+                      DOMP_REDUCE_TYPE reduceType) {
+  int varSize = getSizeBytes(type);
+  int totalSize =  varSize * size;
+  if (totalSize > currentBufferSize) {
+    if(void *buffer = std::realloc(dataBuffer, totalSize)) {
+      dataBuffer = static_cast<char *>(buffer);
+      currentBufferSize = totalSize;
+    } else {
+      throw std::bad_alloc();
+    }
+  }
+  void *dataPtr = (char*)address + (offset * varSize);
+  log("Node %d calling ArrayReduce on %s",rank, varName.c_str());
+  if (reduceType == REDUCE_ON_MASTER) {
+    MPI_Reduce(dataPtr, dataBuffer, size, type, op, 0, MPI_COMM_WORLD);
+  } else {
+    MPI_Allreduce(dataPtr, dataBuffer, size, type, op, MPI_COMM_WORLD);
+  }
+  log("Node %d returned ArrayReduce on %s",rank, varName.c_str());
+}
+
 void DOMP::Synchronize() {
   log("Node %d calling sync",rank);
   dataManager->triggerMap();
@@ -134,15 +169,20 @@ std::pair<char*, int> DOMP::mapDataRequest(char* varName, int start, int size) {
   Variable *var = varList[key];
   int varSize = sizeof(int);
   auto type = var->getType();
-  if (type == MPI_BYTE)  varSize = 1;
-  else if (type == MPI_FLOAT)  varSize = sizeof(float);
-  else if (type == MPI_DOUBLE)  varSize = sizeof(double);
-  else if (type == MPI_INT)  varSize = sizeof(int);
-  else varSize = sizeof(char);
+  varSize = getSizeBytes(type);
 
   int offset = start * varSize;
   char *address = var->getPtr() + offset;
   return std::make_pair(address, varSize * size);
+}
+int DOMP::getSizeBytes(const MPI_Datatype &type) const {
+  int varSize;
+  if (type == MPI_BYTE) varSize = 1;
+  else if (type == MPI_FLOAT)  varSize = sizeof(float);
+  else if (type == MPI_DOUBLE)  varSize = sizeof(double);
+  else if (type == MPI_INT)  varSize = sizeof(int);
+  else varSize = sizeof(char);
+  return varSize;
 }
 
 }

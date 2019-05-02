@@ -1,5 +1,4 @@
 MPI =-DDEBUG_DOMP
-MPICC = mpic++
 
 DEBUG=1
 CFLAGS=-c -g -O3 -Wall -DDEBUG=$(DEBUG) -std=c++11

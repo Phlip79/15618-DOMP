@@ -10,7 +10,7 @@ export MPICC
 export ROOT_DIR=${PWD}
 
 DOMP_LIB = ${ROOT_DIR}/lib/domplib.a
-OUTPUT_DIR = ${ROOT_DIR}/build/
+OUTPUT_DIR = ${ROOT_DIR}/build
 export DOMP_LIB
 export OUTPUT_DIR
 
@@ -34,4 +34,5 @@ kmeans:
 
 clean:
 	rm -rf build/*.o
-	(cd lib; make clean)
+	$(MAKE) -C tests/kmeans clean
+	$(MAKE) -C lib clean
