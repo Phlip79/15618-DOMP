@@ -6,7 +6,7 @@ LDFLAGS= -lm
 
 DOMP_LIB = lib/domplib.a
 
-all: arraySum testDataTransfer
+all: arraySum testDataTransfer logisticRegression
 
 DOMP_LIB:
 	(cd lib; make)
@@ -16,6 +16,9 @@ arraySum: DOMP_LIB tests/arraySum.cpp
 
 testDataTransfer: DOMP_LIB tests/testDataTransfer.cpp
 	$(CC) $(CFLAGS) $(OMP) -o build/testDataTransfer tests/testDataTransfer.cpp $(DOMP_LIB) $(LDFLAGS)
+
+logisticRegression: DOMP_LIB test/logisticRegression.cpp
+    $(CC) $(CFLAGS) $(OMP) -o build/logisticRegression tests/logisticRegression.cpp $(DOMP_LIB) $(LDFLAGS)
 
 clean:
 	rm -rf build/*.o
