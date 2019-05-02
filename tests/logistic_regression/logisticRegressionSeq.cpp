@@ -5,42 +5,50 @@
 using namespace std;
 
 
-LogisticRegression::LogisticRegression(int size, int in, int out) {
+LogisticRegression::~LogisticRegression() {}
+
+LogisticRegressionSeq::LogisticRegressionSeq(int size, int in, int out) : LogisticRegression() {
+
     N = size;
     n_in = in;
     n_out = out;
 
     // initialize W, b
-    W = new double*[n_out];
-    for(int i=0; i<n_out; i++) W[i] = new double[n_in];
+    W = new double *[n_out];
+    for (int i = 0; i < n_out; i++) W[i] = new double[n_in];
     b = new double[n_out];
 
-    for(int i=0; i<n_out; i++) {
-        for(int j=0; j<n_in; j++) {
+    for (int i = 0; i < n_out; i++) {
+        for (int j = 0; j < n_in; j++) {
             W[i][j] = 0;
         }
         b[i] = 0;
     }
 
-    W_temp = new double*[n_out];
-    for(int i=0; i<n_out; i++) W_temp[i] = new double[n_in];
+    W_temp = new double *[n_out];
+    for (int i = 0; i < n_out; i++) W_temp[i] = new double[n_in];
     b_temp = new double[n_out];
 
-    for(int i=0; i<n_out; i++) {
-        for(int j=0; j<n_in; j++) {
+    for (int i = 0; i < n_out; i++) {
+        for (int j = 0; j < n_in; j++) {
             W_temp[i][j] = 0;
         }
         b_temp[i] = 0;
+    }
 }
 
-LogisticRegression::~LogisticRegression() {
+LogisticRegressionSeq::~LogisticRegressionSeq()  {
+    for(int i=0; i<n_out; i++) delete[] W_temp[i];
+    delete[] W_temp;
+    delete[] b_temp;
+
     for(int i=0; i<n_out; i++) delete[] W[i];
     delete[] W;
     delete[] b;
 }
 
 
-void LogisticRegression::train(int *x, int *y, double lr) {
+void LogisticRegressionSeq::train(int *x, int *y, double lr) {
     double *p_y_given_x = new double[n_out];
     double *dy = new double[n_out];
 
@@ -66,7 +74,7 @@ void LogisticRegression::train(int *x, int *y, double lr) {
     delete[] dy;
 }
 
-void LogisticRegression::softmax(double *x) {
+void LogisticRegressionSeq::softmax(double *x) {
     double max = 0.0;
     double sum = 0.0;
 
@@ -79,7 +87,7 @@ void LogisticRegression::softmax(double *x) {
     for(int i=0; i<n_out; i++) x[i] /= sum;
 }
 
-void LogisticRegression::predict(int *x, double *y) {
+void LogisticRegressionSeq::predict(int *x, double *y) {
     for(int i=0; i<n_out; i++) {
         y[i] = 0;
         for(int j=0; j<n_in; j++) {
@@ -124,23 +132,25 @@ void test_lr() {
     };
 
 
-    // construct LogisticRegression
-    LogisticRegression classifier(train_N, n_in, n_out);
+    // construct LogisticRegressionSeq
+    LogisticRegressionSeq classifier(train_N, n_in, n_out);
 
 
     // train online
     for(int epoch=0; epoch<n_epochs; epoch++) {
 
-        for(int i=0; i<train_N; i++) {
+        for (int i = 0; i < train_N; i++) {
             classifier.train(train_X[i], train_Y[i], learning_rate);
         }
 
-        for(int i=0; i<n_out; i++) {
-            for(int j=0; j<n_in; j++) {
-                W[i][j] = W_temp[i][j];
+        for (int i = 0; i < n_out; i++) {
+            for (int j = 0; j < n_in; j++) {
+                classifier.W[i][j] = classifier.W_temp[i][j];
+                cout << "HERE: " << classifier.W[i][0] << endl;
             }
-            b[i] = b_temp[i];
-        // learning_rate *= 0.95;
+            classifier.b[i] = classifier.b_temp[i];
+            // learning_rate *= 0.95;
+        }
     }
 
 

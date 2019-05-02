@@ -4,6 +4,7 @@
 #include "logisticRegression.h"
 #include "../../lib/domp.h"
 using namespace std;
+using namespace domp;
 
 
 LogisticRegression::LogisticRegression(int size, int in, int out) {
@@ -31,7 +32,7 @@ LogisticRegression::~LogisticRegression() {
 }
 
 
-void LogisticRegression::train(int *x, int num_col_x, int *y, int num_col_y, double lr) {
+void LogisticRegression::train(int *x, int *y, double lr) {
     double *p_y_given_x = new double[n_out];
     double *dy = new double[n_out];
 
@@ -119,6 +120,7 @@ void test_lr() {
     // construct LogisticRegression
     LogisticRegression classifier(train_N, n_in, n_out);
 
+    int offset, size;
 
     DOMP_REGISTER(train_X, MPI_INT, 36);
     DOMP_REGISTER(train_Y, MPI_INT, 12);
@@ -135,27 +137,36 @@ void test_lr() {
             classifier.train(&train_X[6*i], &train_Y[6*i], learning_rate);
         }
         // learning_rate *= 0.95;
+        for (int i=0; i<n_out; i++) {
+            DOMP_ARRAY_REDUCE_ALL(classifier.W[i], MPI_DOUBLE, MPI_SUM, 0, n_in);
+            if (DOMP_IS_MASTER) {
+                cout << "HERE: " << classifier.W[i][0] << endl;
+            }
+        }
+        DOMP_ARRAY_REDUCE_ALL(classifier.b, MPI_DOUBLE, MPI_SUM, 0, n_out);
 
-        DOMP_ARRAY_REDUCE_ALL(W[0], MPI_INT, MPI_SUM, 0, n_out);
     }
 
-
-    // test data
-    int test_X[2][6] = {
-            {1, 0, 1, 0, 0, 0},
-            {0, 0, 1, 1, 1, 0}
-    };
-
-    double test_Y[2][2];
+    if (DOMP_IS_MASTER) {
 
 
-    // test
-    for(int i=0; i<test_N; i++) {
-        classifier.predict(test_X[i], test_Y[i]);
-        for(int j=0; j<n_out; j++) {
-            cout << test_Y[i][j] << " ";
+        // test data
+        int test_X[2][6] = {
+                {1, 0, 1, 0, 0, 0},
+                {0, 0, 1, 1, 1, 0}
+        };
+
+        double test_Y[2][2];
+
+
+        // test
+        for (int i = 0; i < test_N; i++) {
+            classifier.predict(test_X[i], test_Y[i]);
+            for (int j = 0; j < n_out; j++) {
+                cout << test_Y[i][j] << " ";
+            }
+            cout << endl;
         }
-        cout << endl;
     }
 
 }

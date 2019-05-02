@@ -63,7 +63,7 @@ void log(const char *fmt, ...);
   #define DOMP_REDUCE(var, type, op) (dompObject->Reduce(#var, (void*)&(var), type, op))
 
   #define DOMP_ARRAY_REDUCE(var, type, op, offset, size) { \
-      dompObject->ArrayReduce(#var, var, type, op, offset, size, REDUCE_ON_MASTER)\
+      dompObject->ArrayReduce(#var, var, type, op, offset, size, REDUCE_ON_MASTER) \
   }
 
   #define DOMP_ARRAY_REDUCE_ALL(var, type, op, offset, size) { \
