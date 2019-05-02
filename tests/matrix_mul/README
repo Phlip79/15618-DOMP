@@ -1,0 +1,16 @@
+This is the README file for the matrix multiplication code.
+
+1. sequential/ :
+	This folder contains the makefile, scripts and binary for the matrix multiplication
+	that is implemented sequentially.
+	Execute the command: make clean && make in this folder to compile the scripts
+
+2. omp/ :
+	This folder contains the makefile, scripts for the speed-up matrix multiplication
+	using the OMP pragmas.
+	Execute the command: make clean && make to generate the binary.
+
+Running the tests:
+1. Use the command "./matrix_mul -i ../matrix_mul_01.dat -o" and 
+   "./matrix_mul -i ../matrix_mul_02.dat -o" in each of the above two folders to execute
+   and see the performance in terms of execution times.
