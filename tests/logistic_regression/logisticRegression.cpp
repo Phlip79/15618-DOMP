@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include <math.h>
-#include "LogisticRegression.h"
+#include "logisticRegression.h"
 using namespace std;
 
 
