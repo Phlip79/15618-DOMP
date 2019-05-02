@@ -136,7 +136,7 @@ void test_lr() {
         }
         // learning_rate *= 0.95;
 
-        DOMP_REDUCE_ALL();
+        DOMP_ARRAY_REDUCE_ALL(W[0], MPI_INT, MPI_SUM, 0, n_out);
     }
 
 
@@ -161,7 +161,9 @@ void test_lr() {
 }
 
 
-int main() {
+int main(int argc, char **argv) {
+    DOMP_INIT(&argc, &argv);
     test_lr();
+    DOMP_FINALIZE();
     return 0;
 }
