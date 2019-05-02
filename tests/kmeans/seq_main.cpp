@@ -57,7 +57,7 @@ using namespace std;
 
 /*---< usage() >------------------------------------------------------------*/
 static void usage(char *argv0, float threshold) {
-    char *help =
+    const char *help =
         "Usage: %s [switches] -i filename -n num_clusters\n"
         "       -i filename    : file containing data to be clustered\n"
         "       -b             : input file is in binary format (default no)\n"
@@ -138,7 +138,6 @@ int main(int argc, char **argv) {
 
         DOMP_EXCLUSIVE(&numCoords, 0, 1);
         DOMP_EXCLUSIVE(&numObjs, 0, 1);
-        DOMP_EXCLUSIVE(objects, 0, numObjs * numCoords);
     }
     // Sync the memory
     DOMP_SYNC
@@ -146,13 +145,15 @@ int main(int argc, char **argv) {
         // Slave nodes get the data
         DOMP_SHARED(&numCoords, 0, 1);
         DOMP_SHARED(&numObjs, 0, 1);
-        objects = (float*) malloc(numObjs * numCoords * sizeof(float));
-        DOMP_SHARED(objects, 0, numObjs * numCoords);
-        assert(objects != NULL);
     }
     // Sync the data to all slave nodes
     DOMP_SYNC
-
+    if (!DOMP_IS_MASTER) {
+        objects = (float*) malloc(numObjs * numCoords * sizeof(float));
+        assert(objects != NULL);
+        DOMP_SHARED(objects, 0, numObjs * numCoords);
+    }
+    DOMP_SYNC
 
     /* start the timer for the core computation -----------------------------*/
     /* membership: the cluster id for each data object */
