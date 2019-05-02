@@ -123,7 +123,6 @@ int main(int argc, char **argv) {
     // This is for sharing among all nodes
     DOMP_REGISTER(&numObjs, MPI_INT, 1);
     DOMP_REGISTER(&numCoords, MPI_INT, 1);
-    DOMP_REGISTER(objects, MPI_FLOAT, numObjs * numCoords);
 
     if(DOMP_IS_MASTER) {
         /* read data points from file ------------------------------------------*/
@@ -135,6 +134,7 @@ int main(int argc, char **argv) {
             io_timing = timing - io_timing;
             clustering_timing = timing;
         }
+        DOMP_REGISTER(objects, MPI_FLOAT, numObjs * numCoords);
 
         DOMP_EXCLUSIVE(&numCoords, 0, 1);
         DOMP_EXCLUSIVE(&numObjs, 0, 1);
@@ -152,6 +152,7 @@ int main(int argc, char **argv) {
     if (!DOMP_IS_MASTER) {
         objects = (float*) malloc(numObjs * numCoords * sizeof(float));
         assert(objects != NULL);
+        DOMP_REGISTER(objects, MPI_FLOAT, numObjs * numCoords);
     }
 
     /* start the timer for the core computation -----------------------------*/
