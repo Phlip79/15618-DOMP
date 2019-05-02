@@ -147,6 +147,7 @@ int main(int argc, char **argv) {
         DOMP_SHARED(&numCoords, 0, 1);
         DOMP_SHARED(&numObjs, 0, 1);
         objects = (float*) malloc(numObjs * numCoords * sizeof(float));
+        DOMP_SHARED(objects, 0, numObjs * numCoords);
         assert(objects != NULL);
     }
     // Sync the data to all slave nodes
