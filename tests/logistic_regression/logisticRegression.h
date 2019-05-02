@@ -1,18 +1,14 @@
-#ifndef LOGISTICREGRESSION_H
-#define LOGISTICREGRESSION_H
+class LogisticRegression {
 
-typedef struct {
-    int N;
+public:
+    int N;  // num of inputs
     int n_in;
     int n_out;
     double **W;
     double *b;
-} LogisticRegression;
-
-void LogisticRegression__construct(LogisticRegression*, int, int, int);
-void LogisticRegression__destruct(LogisticRegression*);
-void LogisticRegression_train(LogisticRegression*, int*, int*, double);
-void LogisticRegression_softmax(LogisticRegression*, double*);
-void LogisticRegression_predict(LogisticRegression*, int*, double*);
-
-#endif
+    LogisticRegression(int, int, int);
+    ~LogisticRegression();
+    void train(int*, int*, double);
+    void softmax(double*);
+    void predict(int*, double*);
+};
