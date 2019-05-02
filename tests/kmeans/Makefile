@@ -37,7 +37,7 @@
 
 .KEEP_STATE:
 
-all: seq cuda #omp
+all: seq #cuda #omp
 
 DFLAGS      =
 OPTFLAGS    = -O -NDEBUG
