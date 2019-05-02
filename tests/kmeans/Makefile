@@ -37,45 +37,22 @@
 
 .KEEP_STATE:
 
-all: seq #cuda #omp
+all: seq
 
 DFLAGS      =
 OPTFLAGS    = -O -NDEBUG
 OPTFLAGS    = -g -pg #-Wno-int-to-pointer-cast
 INCFLAGS    = -I.
 CFLAGS      = $(OPTFLAGS) $(DFLAGS) $(INCFLAGS)
-NVCCFLAGS   = $(CFLAGS) --ptxas-options=-v -arch=sm_61
 LDFLAGS     = $(OPTFLAGS)
 LIBS        =
 
-# please check the compile to the one you use and the openmp flag
-# Here, I am using gcc and its openmp compile flag is -fopenmp
-# If icc is used, please us -opnemp
-#
-OMPFLAGS    = -fopenmp
-OMPFLAGS 	+= -msse4.2 -msse2 -msse3 -O2
-
 CC          = gcc
-MPICC       = mpicc
-NVCC        = nvcc
 
 .c.o:
 	$(CC) $(CFLAGS) -c $<
 
 H_FILES     = kmeans.h
-
-#------   OpenMP version -----------------------------------------
-OMP_SRC     = omp_main.c \
-	      omp_kmeans.c
-
-OMP_OBJ     = $(OMP_SRC:%.c=%.o)
-
-omp_kmeans.o: omp_kmeans.c $(H_FILES)
-	$(CC) $(CFLAGS) $(OMPFLAGS) -c omp_kmeans.c
-
-omp: omp_main
-omp_main: $(OMP_OBJ) file_io.o
-	$(CC) $(LDFLAGS) $(OMPFLAGS) -o omp_main $(OMP_OBJ) file_io.o $(LIBS)
 
 #------   sequential version -----------------------------------------
 SEQ_SRC     = seq_main.c   \
@@ -91,34 +68,9 @@ seq: seq_main
 seq_main: $(SEQ_OBJ) $(H_FILES)
 	$(CC) $(LDFLAGS) -O2 -o seq_main $(SEQ_OBJ) $(LIBS)
 
-# ------------------------------------------------------------------------------
-# CUDA Version
-
-%.o : %.cu
-	$(NVCC) $(NVCCFLAGS) -o $@ -c $<
-
-CUDA_C_SRC = cuda_main.cu cuda_io.cu cuda_wtime.cu
-CUDA_CU_SRC = cuda_kmeans.cu
-
-CUDA_C_OBJ = $(CUDA_C_SRC:%.cu=%.o)
-CUDA_CU_OBJ = $(CUDA_CU_SRC:%.cu=%.o)
-
-CUDA_C_NEW_SRC = cuda_main_new.cu cuda_io.cu cuda_wtime.cu
-CUDA_CU_NEW_SRC = cuda_kmeans_new.cu
-
-CUDA_C_NEW_OBJ = $(CUDA_C_NEW_SRC:%.cu=%.o)
-CUDA_CU_NEW_OBJ = $(CUDA_CU_NEW_SRC:%.cu=%.o)
-
-cuda: cuda_main cuda_new
-cuda_main: $(CUDA_C_OBJ) $(CUDA_CU_OBJ)
-	$(NVCC) $(LDFLAGS) -o $@ $(CUDA_C_OBJ) $(CUDA_CU_OBJ)
-
-cuda_new: $(CUDA_C_NEW_OBJ) $(CUDA_CU_NEW_OBJ)
-	$(NVCC) $(LDFLAGS) -o cuda_new_main $(CUDA_C_NEW_OBJ) $(CUDA_CU_NEW_OBJ)
-
 #---------------------------------------------------------------------
 clean:
-	rm -rf *.o omp_main seq_main cuda_main cuda_new_main\
+	rm -rf *.o seq_main \
 	       core* .make.state gmon.out     \
                *.cluster_centres *.membership \
                Image_data/*.cluster_centres   \
