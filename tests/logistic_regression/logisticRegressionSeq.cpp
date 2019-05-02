@@ -146,8 +146,8 @@ void test_lr() {
         for (int i = 0; i < n_out; i++) {
             for (int j = 0; j < n_in; j++) {
                 classifier.W[i][j] = classifier.W_temp[i][j];
-                cout << "HERE: " << classifier.W[i][0] << endl;
             }
+            //cout << "HERE: " << classifier.W[i][0] << endl;
             classifier.b[i] = classifier.b_temp[i];
             // learning_rate *= 0.95;
         }

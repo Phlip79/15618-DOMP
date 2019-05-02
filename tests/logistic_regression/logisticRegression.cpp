@@ -23,9 +23,25 @@ LogisticRegression::LogisticRegression(int size, int in, int out) {
         }
         b[i] = 0;
     }
+
+    W_temp = new double *[n_out];
+    for (int i = 0; i < n_out; i++) W_temp[i] = new double[n_in];
+    b_temp = new double[n_out];
+
+    for (int i = 0; i < n_out; i++) {
+        for (int j = 0; j < n_in; j++) {
+            W_temp[i][j] = 0;
+        }
+        b_temp[i] = 0;
+    }
+
 }
 
 LogisticRegression::~LogisticRegression() {
+    for(int i=0; i<n_out; i++) delete[] W_temp[i];
+    delete[] W_temp;
+    delete[] b_temp;
+
     for(int i=0; i<n_out; i++) delete[] W[i];
     delete[] W;
     delete[] b;
@@ -49,10 +65,10 @@ void LogisticRegression::train(int *x, int *y, double lr) {
         dy[i] = y[i] - p_y_given_x[i];
 
         for(int j=0; j<n_in; j++) {
-            W[i][j] += lr * dy[i] * x[j] / N;
+            W_temp[i][j] += lr * dy[i] * x[j] / N;
         }
 
-        b[i] += lr * dy[i] / N;
+        b_temp[i] += lr * dy[i] / N;
     }
     delete[] p_y_given_x;
     delete[] dy;
@@ -126,24 +142,40 @@ void test_lr() {
     DOMP_REGISTER(train_Y, MPI_INT, 12);
     DOMP_PARALLELIZE(train_N, &offset, &size);
 
+    DOMP_EXCLUSIVE(train_X, offset, size);
+    DOMP_EXCLUSIVE(train_Y, offset, size);
+    DOMP_SYNC;
+
     // train online
     for(int epoch=0; epoch<n_epochs; epoch++) {
 
-        DOMP_EXCLUSIVE(train_X, offset, size);
-        DOMP_EXCLUSIVE(train_Y, offset, size);
-        DOMP_SYNC;
-
-        for(int i=0; i<train_N; i++) {
-            classifier.train(&train_X[6*i], &train_Y[6*i], learning_rate);
+        for (int i = 0; i < n_out; i++) {
+            for (int j = 0; j < n_in; j++) {
+                classifier.W_temp[i][j] = 0;
+            }
+            classifier.b_temp[i] = 0;
         }
+
+        for(int i=offset; i<offset+size; i++) {
+            classifier.train(&train_X[6*i], &train_Y[2*i], learning_rate);
+        }
+
         // learning_rate *= 0.95;
-        for (int i=0; i<n_out; i++) {
-            DOMP_ARRAY_REDUCE_ALL(classifier.W[i], MPI_DOUBLE, MPI_SUM, 0, n_in);
+        for (int i = 0; i < n_out; i++) {
+            DOMP_ARRAY_REDUCE_ALL(classifier.W_temp[i], MPI_DOUBLE, MPI_SUM, 0, n_in);
+            for (int j = 0; j < n_in; j++) {
+                classifier.W[i][j] += classifier.W_temp[i][j];
+            }
+
             if (DOMP_IS_MASTER) {
-                cout << "HERE: " << classifier.W[i][0] << endl;
+                //cout << "HERE DIFF: " << classifier.W_temp[i][0] << endl;
+                //cout << "HERE: " << classifier.W[i][0] << endl;
             }
         }
-        DOMP_ARRAY_REDUCE_ALL(classifier.b, MPI_DOUBLE, MPI_SUM, 0, n_out);
+        DOMP_ARRAY_REDUCE_ALL(classifier.b_temp, MPI_DOUBLE, MPI_SUM, 0, n_out);
+        for (int i = 0; i < n_out; i++) {
+            classifier.b[i] += classifier.b_temp[i];
+        }
 
     }
 
