@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <chrono>
+#include <unistd.h>     /* getopt() */
 using namespace std;
 
 
@@ -104,7 +105,7 @@ void LogisticRegressionSeq::predict(int *x, double *y) {
 }
 
 
-void test_lr() {
+void test_lr(char *inFile, char *lFile) {
     srand(0);
 
     double learning_rate = 0.1;
@@ -121,7 +122,7 @@ void test_lr() {
     //ifstream inputFile;
     //inputFile.open("array_input.txt");
 
-    ifstream inputFile ("tests/logistic_regression/array_input.txt");
+    ifstream inputFile (inFile);
     string line;
     if (inputFile.is_open()) {
         getline(inputFile, line);
@@ -152,7 +153,7 @@ void test_lr() {
         cout << "Error in opening input file" << endl;
     }
 
-    ifstream labelFile ("tests/logistic_regression/array_label.txt");
+    ifstream labelFile (lFile);
     if (labelFile.is_open()) {
         getline(labelFile, line);
 
@@ -256,8 +257,36 @@ void test_lr() {
 
 }
 
+/*---< usage() >------------------------------------------------------------*/
+static void usage(char *argv0) {
+    const char *help =
+      "Usage: %s [switches] -i inputFIle -l labelFile\n"
+      "       -i filename    : file containing training data\n"
+      "       -l filename    : file containing training data\n";
+    fprintf(stderr, help, argv0);
+}
 
-int main() {
-    test_lr();
+int main(int argc, char **argv) {
+    extern char   *optarg;
+    extern int     optind;
+    int     opt;
+    char *inputFile = NULL;
+    char *labelFile = NULL;
+
+    while ((opt = getopt(argc, argv, "l:i:")) != EOF) {
+        switch (opt) {
+            case 'i': inputFile = optarg;
+            break;
+            case 'l': labelFile = optarg;
+            break;
+            default: usage(argv[0]);
+            break;
+        }
+    }
+    if (inputFile == NULL || labelFile == NULL) {
+        usage(argv[0]);
+    }
+
+    test_lr(inputFile, labelFile);
     return 0;
 }
