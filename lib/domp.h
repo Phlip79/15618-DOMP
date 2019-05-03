@@ -76,7 +76,7 @@ void log(const char *fmt, ...);
     dompObject = NULL; \
   }
 
-  #define DOMP_TIMER_INIT() { dompObject->profiler.programStart = currentSeconds();}
+  #define DOMP_TIMER_INIT() { dompObject->InitProfiler();}
 
   #define DOMP_IS_MASTER (dompObject->IsMaster())
 }
@@ -125,6 +125,7 @@ class domp::DOMP{
     DOMP_REDUCE_TYPE reduceType);
 
   void PrintProfilingData();
+  void InitProfiler();
 
 };
 

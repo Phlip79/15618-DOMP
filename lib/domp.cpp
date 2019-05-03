@@ -213,4 +213,8 @@ if(IsMaster()) {
 #endif
 }
 
+void DOMP::InitProfiler() {
+  this->profiler.programStart = currentSeconds();
+}
+
 }

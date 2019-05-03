@@ -292,8 +292,6 @@ static void usage(char *argv0) {
 
 int main(int argc, char **argv) {
     DOMP_INIT(&argc, &argv);
-    extern char   *optarg;
-    extern int     optind;
     int     opt;
     char *inputFile = NULL;
     char *labelFile = NULL;
