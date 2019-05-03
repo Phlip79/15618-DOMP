@@ -5,7 +5,7 @@ OMP=-fopenmp -msse4.2 -msse2 -msse3
 CFLAGS=-g -O3 -Wall -DDEBUG=$(DEBUG) -DPROFILING=$(PROFILING) -std=c++11
 LDFLAGS= -lm
 
-all: arraySum testDataTransfer kmeans logisticRegression
+all: arraySum testDataTransfer kmeans logisticRegression logisticRegressionSeq
 
 export MPICC
 export PROFILING
