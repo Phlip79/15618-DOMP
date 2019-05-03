@@ -128,10 +128,15 @@ float* seq_kmeans(float *objects,      /* in: [numObjs * numCoords] */
 
     int offset;
     int size;
+    DOMP_REGISTER(membership, MPI_INT, numObjs);
+
 
     DOMP_PARALLELIZE(numObjs, &offset, &size);
     DOMP_SHARED(objects, offset * numCoords, size * numCoords);
+    DOMP_EXCLUSIVE(membership, offset, size);
     DOMP_SYNC;
+
+    std::cout<<"Node::"<<DOMP_NODE_ID<<", offset="<<offset<<",size="<<size<<std::endl;
 
     /* initialize membership[] */
     for (i = offset; i < offset + size; i++) {
@@ -171,16 +176,23 @@ float* seq_kmeans(float *objects,      /* in: [numObjs * numCoords] */
             }
             newClusterSize[i] = 0;   /* set back to 0 */
         }
-//        if (DOMP_IS_MASTER) {
-//            std::cout<<"Iteration "<<loop<<", delta is "<<delta<<std::endl;
-//        }
+        if (DOMP_IS_MASTER) {
+            std::cout<<"Iteration "<<loop<<", delta is "<<delta<<std::endl;
+        }
         delta /= numObjs;
+        MPI_Barrier(MPI_COMM_WORLD);
+//        if (loop == 0) break;
     } while (delta > threshold && loop++ < 500);
 
     *loop_iterations = loop + 1;
 
     free(newClusters);
     free(newClusterSize);
+
+    if (DOMP_IS_MASTER) {
+      DOMP_SHARED(membership, 0, numObjs);
+    }
+    DOMP_SYNC;
 
     return clusters;
 }
