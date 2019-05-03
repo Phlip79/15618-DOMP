@@ -176,6 +176,7 @@ void test_lr(char *inFile, char *lFile) {
     }
 
     auto start = chrono::high_resolution_clock::now();
+    DOMP_TIMER_INIT();
 
 
     // training data

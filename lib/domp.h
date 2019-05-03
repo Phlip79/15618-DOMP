@@ -76,6 +76,8 @@ void log(const char *fmt, ...);
     dompObject = NULL; \
   }
 
+  #define DOMP_TIMER_INIT() { dompObject->profiler.programStart = currentSeconds();}
+
   #define DOMP_IS_MASTER (dompObject->IsMaster())
 }
 
