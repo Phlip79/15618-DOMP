@@ -4,6 +4,7 @@
 #include "logisticRegression.h"
 #include "../../lib/domp.h"
 #include <fstream>
+#include <chrono>
 using namespace std;
 using namespace domp;
 
@@ -173,6 +174,8 @@ void test_lr() {
         cout << "Error in opening label file" << endl;
     }
 
+    auto start = chrono::high_resolution_clock::now();
+
 
     // training data
 
@@ -202,7 +205,6 @@ void test_lr() {
     LogisticRegression classifier(train_N, n_in, n_out);
 
     int offset, size;
-
 
     DOMP_REGISTER(train_X, MPI_INT, train_N * n_in);
     DOMP_REGISTER(train_Y, MPI_INT, train_N * n_out);
@@ -241,6 +243,10 @@ void test_lr() {
 
     if (DOMP_IS_MASTER) {
 
+        auto stop = chrono::high_resolution_clock::now();
+        auto duration = chrono::duration_cast<chrono::milliseconds>(stop - start);
+        cout << "Total time is: ";
+        cout << duration.count() << endl;
 
         // test data inputs
         int test_X[2][6] = {
@@ -259,6 +265,15 @@ void test_lr() {
                 cout << test_Y[i][j] << " ";
             }
             cout << endl;
+        }
+
+        //weights and bias
+        for (int i = 0; i < n_out; i++) {
+            for (int j = 0; j < n_in; j++) {
+                cout << classifier.W[i][j] << " ";
+            }
+            cout << endl;
+            cout << classifier.b[i] << endl;
         }
     }
 

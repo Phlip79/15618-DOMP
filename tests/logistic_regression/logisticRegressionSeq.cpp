@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <chrono>
 using namespace std;
 
 
@@ -177,6 +178,9 @@ void test_lr() {
         cout << "Error in opening label file" << endl;
     }
 
+    auto start = chrono::high_resolution_clock::now();
+
+
     // training data
 //    int train_X[6][6] = {
 //            {1, 1, 1, 0, 0, 0},
@@ -218,6 +222,10 @@ void test_lr() {
         }
     }
 
+    auto stop = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::milliseconds>(stop - start);
+    cout << "Total time is: ";
+    cout << duration.count() << endl;
 
     // test data
     int test_X[2][6] = {
@@ -235,6 +243,15 @@ void test_lr() {
             cout << test_Y[i][j] << " ";
         }
         cout << endl;
+    }
+
+    //weights and bias
+    for (int i = 0; i < n_out; i++) {
+        for (int j = 0; j < n_in; j++) {
+            cout << classifier.W[i][j] << " ";
+        }
+        cout << endl;
+        cout << classifier.b[i] << endl;
     }
 
 }
