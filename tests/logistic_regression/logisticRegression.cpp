@@ -3,6 +3,7 @@
 #include <math.h>
 #include "logisticRegression.h"
 #include "../../lib/domp.h"
+#include <fstream>
 using namespace std;
 using namespace domp;
 
@@ -111,35 +112,100 @@ void test_lr() {
     int n_in = 6;
     int n_out = 2;
 
+    int *train_X;
+    int *train_Y;
+
+    //ifstream inputFile;
+    //inputFile.open("array_input.txt");
+
+    ifstream inputFile ("tests/logistic_regression/array_input.txt");
+    string line;
+    if (inputFile.is_open()) {
+        getline(inputFile, line);
+        train_N = atoi(line.c_str());
+
+        train_X = new int[train_N * 6];
+        train_Y = new int[train_N * 2];
+
+        int i = 0;
+        string delimiter = ",";
+        while(getline(inputFile, line)) {
+            size_t pos = 0;
+            string token;
+            while ((pos = line.find(delimiter)) != string::npos) {
+                token = line.substr(0, pos);
+                train_X[i] = atoi(token.c_str());
+                line.erase(0, pos + delimiter.length());
+                i++;
+            }
+            token = line.substr(0, pos);
+            train_X[i] = atoi(token.c_str());
+            i++;
+        }
+        inputFile.close();
+    }
+    else {
+        cout << "Error in opening input file" << endl;
+    }
+
+    ifstream labelFile ("tests/logistic_regression/array_label.txt");
+    if (labelFile.is_open()) {
+        getline(labelFile, line);
+
+        int i = 0;
+        string delimiter = ",";
+        while(getline(labelFile, line)) {
+            size_t pos = 0;
+            string token;
+            while ((pos = line.find(delimiter)) != string::npos) {
+                token = line.substr(0, pos);
+                train_Y[i] = atoi(token.c_str());
+                line.erase(0, pos + delimiter.length());
+                i++;
+            }
+            token = line.substr(0, pos);
+            train_Y[i] = atoi(token.c_str());
+            i++;
+        }
+        labelFile.close();
+    }
+    else {
+        cout << "Error in opening label file" << endl;
+    }
+
 
     // training data
-    // 6 x 6 matrix
-    int train_X[36] = {
-            1, 1, 1, 0, 0, 0,
-            1, 0, 1, 0, 0, 0,
-            1, 1, 1, 0, 0, 0,
-            0, 0, 1, 1, 1, 0,
-            0, 0, 1, 1, 0, 0,
-            0, 0, 1, 1, 1, 0
-    };
 
-    // 6 x 2 matrix
-    int train_Y[12] = {
-            1, 0,
-            1, 0,
-            1, 0,
-            0, 1,
-            0, 1,
-            0, 1
-    };
+    //Inputs
+    // 6 x 6 matrix
+//    int train_X[36] = {
+//            1, 1, 1, 0, 0, 0,
+//            1, 0, 1, 0, 0, 0,
+//            1, 1, 1, 0, 0, 0,
+//            0, 0, 1, 1, 1, 0,
+//            0, 0, 1, 1, 0, 0,
+//            0, 0, 1, 1, 1, 0
+//    };
+//
+//    //Labels
+//    // 6 x 2 matrix
+//    int train_Y[12] = {
+//            1, 0,
+//            1, 0,
+//            1, 0,
+//            0, 1,
+//            0, 1,
+//            0, 1
+//    };
 
     // construct LogisticRegression
     LogisticRegression classifier(train_N, n_in, n_out);
 
     int offset, size;
 
-    DOMP_REGISTER(train_X, MPI_INT, 36);
-    DOMP_REGISTER(train_Y, MPI_INT, 12);
+
+    DOMP_REGISTER(train_X, MPI_INT, train_N * n_in);
+    DOMP_REGISTER(train_Y, MPI_INT, train_N * n_out);
     DOMP_PARALLELIZE(train_N, &offset, &size);
 
     DOMP_EXCLUSIVE(train_X, offset, size);
@@ -148,13 +214,6 @@ void test_lr() {
 
     // train online
     for(int epoch=0; epoch<n_epochs; epoch++) {
-
-        for (int i = 0; i < n_out; i++) {
-            for (int j = 0; j < n_in; j++) {
-                classifier.W_temp[i][j] = 0;
-            }
-            classifier.b_temp[i] = 0;
-        }
 
         for(int i=offset; i<offset+size; i++) {
             classifier.train(&train_X[6*i], &train_Y[2*i], learning_rate);
@@ -165,16 +224,17 @@ void test_lr() {
             DOMP_ARRAY_REDUCE_ALL(classifier.W_temp[i], MPI_DOUBLE, MPI_SUM, 0, n_in);
             for (int j = 0; j < n_in; j++) {
                 classifier.W[i][j] += classifier.W_temp[i][j];
+                classifier.W_temp[i][j] = 0;
             }
+
+            DOMP_ARRAY_REDUCE_ALL(classifier.b_temp, MPI_DOUBLE, MPI_SUM, 0, n_out);
+            classifier.b[i] += classifier.b_temp[i];
+            classifier.b_temp[i] = 0;
 
             if (DOMP_IS_MASTER) {
                 //cout << "HERE DIFF: " << classifier.W_temp[i][0] << endl;
                 //cout << "HERE: " << classifier.W[i][0] << endl;
             }
-        }
-        DOMP_ARRAY_REDUCE_ALL(classifier.b_temp, MPI_DOUBLE, MPI_SUM, 0, n_out);
-        for (int i = 0; i < n_out; i++) {
-            classifier.b[i] += classifier.b_temp[i];
         }
 
     }
@@ -182,12 +242,13 @@ void test_lr() {
     if (DOMP_IS_MASTER) {
 
 
-        // test data
+        // test data inputs
         int test_X[2][6] = {
                 {1, 0, 1, 0, 0, 0},
                 {0, 0, 1, 1, 1, 0}
         };
 
+        //predicted labels
         double test_Y[2][2];
 
 
