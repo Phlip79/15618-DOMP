@@ -66,7 +66,6 @@ static void usage(char *argv0, float threshold) {
         "       -o             : output timing results (default no)\n"
         "       -d             : enable debug mode\n";
     fprintf(stderr, help, argv0, threshold);
-    exit(-1);
 }
 
 /*---< main() >-------------------------------------------------------------*/
@@ -85,6 +84,7 @@ int main(int argc, char **argv) {
            float   threshold;
            double  timing, io_timing, clustering_timing;
            int     loop_iterations;
+           int retCode = -1;
 
     DOMP_INIT(&argc, &argv);
     /* some default values */
@@ -117,7 +117,10 @@ int main(int argc, char **argv) {
         }
       }
 
-      if (filename == 0 || numClusters <= 1) usage(argv[0], threshold);
+      if (filename == 0 || numClusters <= 1) {
+        usage(argv[0], threshold);
+        goto done;
+      }
 
       if (is_output_timing) io_timing = wtime();
     }
@@ -167,6 +170,10 @@ int main(int argc, char **argv) {
     /* membership: the cluster id for each data object */
     membership = (int*) malloc(numObjs * sizeof(int));
     assert(membership != NULL);
+
+    std::cout<<"Node::"<<DOMP_NODE_ID<<", numCoords="<<numCoords<<", numObjs="<<numObjs<<",threshold="<<threshold<<","
+                                                                                                                   "numClusters="<<numClusters<<std::endl;
+
     clusters = seq_kmeans(objects, numCoords, numObjs, numClusters, threshold,
                           membership, &loop_iterations);
     free(objects);
@@ -202,8 +209,10 @@ int main(int argc, char **argv) {
         printf("I/O time           = %10.4f sec\n", io_timing);
         printf("Computation timing = %10.4f sec\n", clustering_timing);
     }
+    retCode = 0;
 
+done:
     DOMP_FINALIZE();
-    return(0);
+    return(retCode);
 }
 

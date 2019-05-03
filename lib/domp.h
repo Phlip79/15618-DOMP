@@ -12,6 +12,7 @@
 
 #include <mpi.h>
 #include <stdbool.h>
+#include "util/CycleTimer.h"
 
 namespace domp {
   #define DOMP_MAX_VAR_NAME (50)
@@ -28,10 +29,10 @@ namespace domp {
     DOMP_VAR_NOT_FOUND_ON_MASTER
   };
 
-
   class DOMP;
   class DataManager;
   class Variable;
+  class Profiler;
 
 void log(const char *fmt, ...);
   extern DOMP *dompObject;
@@ -78,6 +79,18 @@ void log(const char *fmt, ...);
   #define DOMP_IS_MASTER (dompObject->IsMaster())
 }
 
+class domp::Profiler {
+ public:
+  double syncTime;
+  double reduceTime;
+  double programStart;
+  Profiler() {
+    syncTime = 0;
+    reduceTime = 0;
+    programStart = currentSeconds();
+  }
+};
+
 class domp::DOMP{
   int rank;
   int clusterSize;
@@ -85,7 +98,9 @@ class domp::DOMP{
   DataManager *dataManager;
   void *dataBuffer;
   int currentBufferSize;
-
+#if PROFILING
+  Profiler profiler;
+#endif
   int getSizeBytes(const MPI_Datatype &type) const;
  public:
   DOMP(int * argc, char ***argv);
@@ -95,7 +110,7 @@ class domp::DOMP{
   void FirstShared(std::string varName, int offset, int size);
   void Shared(std::string varName, int offset, int size);
   void Exclusive(std::string varName, int offset, int size);
-  int Reduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op);
+  void Reduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op);
   void Synchronize();
   bool IsMaster();
   int GetRank();
@@ -106,6 +121,9 @@ class domp::DOMP{
   // For reduction
   void ArrayReduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op, int offset, int size,
     DOMP_REDUCE_TYPE reduceType);
+
+  void PrintProfilingData();
+
 };
 
 class domp::Variable {
@@ -128,6 +146,5 @@ class domp::Variable {
     return size;
   }
 };
-
 
 #endif //DOMP_DOMP_H

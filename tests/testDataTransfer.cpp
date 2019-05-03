@@ -40,7 +40,7 @@ void compute(int total_size) {
       sum += arr[i];
     }
   }
-  sum = DOMP_REDUCE(sum, MPI_INT, MPI_SUM);
+  DOMP_REDUCE(sum, MPI_INT, MPI_SUM);
   if (DOMP_IS_MASTER) {
     std::cout <<"Sum is "<<sum<<std::endl;
   }

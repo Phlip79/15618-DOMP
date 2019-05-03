@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include "domp.h"
 #include "DataManager.h"
+#include "util/CycleTimer.h"
 
 //void debug_printf(char )
 
@@ -61,7 +62,7 @@ DOMP::~DOMP() {
   // Free the memory for variables
   for (std::map<std::string,Variable*>::iterator it=varList.begin(); it!=varList.end(); ++it)
     delete(it->second);
-
+  PrintProfilingData();
   MPI_Finalize();
 }
 
@@ -110,19 +111,17 @@ void DOMP::Exclusive(std::string varName, int offset, int size) {
   dataManager->requestData(varName, offset, size, MPI_EXCLUSIVE_FIRST);
 }
 
-int DOMP::Reduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op) {
-  int val;
-  log("Node %d calling reduce on %s",rank, varName.c_str());
-  MPI_Reduce(address, &val, 1, type, op, 0, MPI_COMM_WORLD);
-  log("Node %d returned reduce on %s",rank, varName.c_str());
-  return val;
+void DOMP::Reduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op) {
+  ArrayReduce(varName, address, type, op, 0, 1, REDUCE_ON_MASTER);
 }
 
 
 void DOMP::ArrayReduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op, int offset, int size,
                       DOMP_REDUCE_TYPE reduceType) {
-
   log("Node %d::Called ArrayReduce with address %p", rank, address);
+#if PROFILING
+  double start = currentSeconds();
+#endif
   int varSize = getSizeBytes(type);
   int totalSize =  varSize * size;
   if (totalSize > currentBufferSize) {
@@ -145,12 +144,21 @@ void DOMP::ArrayReduce(std::string varName, void *address, MPI_Datatype type, MP
     MPI_Allreduce(dataPtr, dataBuffer, size, type, op, MPI_COMM_WORLD);
   }
   memcpy(dataPtr, dataBuffer, totalSize);
+#if PROFILING
+  profiler.reduceTime += currentSeconds() - start;
+#endif
   log("Node %d returned ArrayReduce on %s",rank, varName.c_str());
 }
 
 void DOMP::Synchronize() {
   log("Node %d calling sync",rank);
+#if PROFILING
+  double start = currentSeconds();
+#endif
   dataManager->triggerMap();
+#if PROFILING
+  profiler.syncTime += currentSeconds() - start;
+#endif
   log("Node %d returned sync",rank);
 }
 
@@ -191,6 +199,18 @@ int DOMP::getSizeBytes(const MPI_Datatype &type) const {
   else if (type == MPI_INT)  varSize = sizeof(int);
   else varSize = sizeof(char);
   return varSize;
+}
+
+void DOMP::PrintProfilingData() {
+#if PROFILING
+if(IsMaster()) {
+  printf("DOMP Sync time           = %10.4f sec\n", this->profiler.syncTime);
+  printf("DOMP Reduce time = %10.4f sec\n", this->profiler.reduceTime);
+  printf("DOMP Total Library time = %10.4f sec\n", this->profiler.reduceTime + this->profiler.syncTime);
+  double totalTime = currentSeconds() - this->profiler.programStart;
+  printf("DOMP Total time = %10.4f sec\n", totalTime);
+}
+#endif
 }
 
 }

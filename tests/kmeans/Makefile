@@ -39,7 +39,7 @@
 
 all: seq
 
-DFLAGS      =
+DFLAGS      = -DPROFILING=$(PROFILING)
 OPTFLAGS    = -O -NDEBUG
 OPTFLAGS    = -g -pg #-Wno-int-to-pointer-cast
 INCFLAGS    = -I.

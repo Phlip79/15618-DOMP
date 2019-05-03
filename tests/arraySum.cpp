@@ -35,7 +35,7 @@ int compute(int total_size) {
       }
    }
   std::cout<<DOMP_NODE_ID<<" Calling reduce now"<<std::endl;
-  sum = DOMP_REDUCE(sum, MPI_INT, MPI_SUM);
+  DOMP_REDUCE(sum, MPI_INT, MPI_SUM);
   return sum;
 }
 

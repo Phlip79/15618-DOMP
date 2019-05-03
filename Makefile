@@ -1,12 +1,14 @@
 DEBUG=0
+PROFILING=1
 MPICC=mpic++
 OMP=-fopenmp -msse4.2 -msse2 -msse3
-CFLAGS=-g -O3 -Wall -DDEBUG=$(DEBUG) -std=c++11
+CFLAGS=-g -O3 -Wall -DDEBUG=$(DEBUG) -DPROFILING=$(PROFILING) -std=c++11
 LDFLAGS= -lm
 
-all: arraySum testDataTransfer logisticRegression kmeans
+all: arraySum testDataTransfer kmeans logisticRegression
 
 export MPICC
+export PROFILING
 export ROOT_DIR=${PWD}
 
 DOMP_LIB = ${ROOT_DIR}/lib/domplib.a
