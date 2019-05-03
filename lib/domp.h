@@ -12,6 +12,7 @@
 
 #include <mpi.h>
 #include <stdbool.h>
+#include "util/CycleTimer.h"
 
 namespace domp {
   #define DOMP_MAX_VAR_NAME (50)
@@ -76,20 +77,17 @@ void log(const char *fmt, ...);
   }
 
   #define DOMP_IS_MASTER (dompObject->IsMaster())
-
-  #define DOMP_PROFILING_DATA(profilerPtr) { \
-      dompObject->GetProfilingData(profilerPtr); \
-  }
-
 }
 
 class domp::Profiler {
  public:
   double syncTime;
   double reduceTime;
+  double programStart;
   Profiler() {
     syncTime = 0;
     reduceTime = 0;
+    programStart = currentSeconds();
   }
 };
 
@@ -124,7 +122,7 @@ class domp::DOMP{
   void ArrayReduce(std::string varName, void *address, MPI_Datatype type, MPI_Op op, int offset, int size,
     DOMP_REDUCE_TYPE reduceType);
 
-  void GetProfilingData(Profiler* profiler);
+  void PrintProfilingData();
 
 };
 

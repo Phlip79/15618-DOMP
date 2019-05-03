@@ -62,7 +62,7 @@ DOMP::~DOMP() {
   // Free the memory for variables
   for (std::map<std::string,Variable*>::iterator it=varList.begin(); it!=varList.end(); ++it)
     delete(it->second);
-
+  PrintProfilingData();
   MPI_Finalize();
 }
 
@@ -201,8 +201,16 @@ int DOMP::getSizeBytes(const MPI_Datatype &type) const {
   return varSize;
 }
 
-void DOMP::GetProfilingData(Profiler* profiler) {
-  memcpy(profiler, &this->profiler, sizeof(Profiler));
+void DOMP::PrintProfilingData() {
+#if PROFILING
+if(IsMaster()) {
+  printf("DOMP Sync time           = %10.4f sec\n", this->profiler.syncTime);
+  printf("DOMP Reduce time = %10.4f sec\n", this->profiler.reduceTime);
+  printf("DOMP Total Library time = %10.4f sec\n", this->profiler.reduceTime + this->profiler.syncTime);
+  double totalTime = currentSeconds() - this->profiler.programStart;
+  printf("DOMP Total time = %10.4f sec\n", totalTime);
+}
+#endif
 }
 
 }

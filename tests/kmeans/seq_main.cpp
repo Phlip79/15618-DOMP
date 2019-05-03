@@ -208,14 +208,6 @@ int main(int argc, char **argv) {
 
         printf("I/O time           = %10.4f sec\n", io_timing);
         printf("Computation timing = %10.4f sec\n", clustering_timing);
-#if PROFILING
-        Profiler profiler;
-        DOMP_PROFILING_DATA(&profiler);
-        printf("DOMP Sync time           = %10.4f sec\n", profiler.syncTime);
-        printf("DOMP Reduce time = %10.4f sec\n", profiler.reduceTime);
-        printf("DOMP Total Library time = %10.4f sec\n", profiler.reduceTime + profiler.syncTime);
-
-#endif
     }
     retCode = 0;
 
