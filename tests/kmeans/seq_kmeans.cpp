@@ -134,16 +134,20 @@ float* seq_kmeans(float *objects,      /* in: [numObjs * numCoords] */
     DOMP_SYNC;
 
     /* initialize membership[] */
-    for (i=offset; i<size; i++) membership[i] = -1;
+    for (i = offset; i < offset + size; i++) {
+        membership[i] = -1;
+    }
     do {
         delta = 0.0;
 
-        for (i=offset; i<offset + size; i++) {
+        for (i = offset; i < offset + size; i++) {
             /* find the array index of nestest cluster center */
             index = find_nearest_cluster(numClusters, numCoords, &objects[i * numCoords], clusters);
 
             /* if membership changes, increase delta by 1 */
-            if (membership[i] != index) delta += 1.0;
+            if (membership[i] != index) {
+                delta += 1.0;
+            }
 
             /* assign the membership to object i */
             membership[i] = index;
@@ -167,9 +171,9 @@ float* seq_kmeans(float *objects,      /* in: [numObjs * numCoords] */
             }
             newClusterSize[i] = 0;   /* set back to 0 */
         }
-        if (DOMP_IS_MASTER) {
-            std::cout<<"Iteration "<<loop<<", delta is "<<delta<<std::endl;
-        }
+//        if (DOMP_IS_MASTER) {
+//            std::cout<<"Iteration "<<loop<<", delta is "<<delta<<std::endl;
+//        }
         delta /= numObjs;
     } while (delta > threshold && loop++ < 500);
 

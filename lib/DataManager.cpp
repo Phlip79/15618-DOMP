@@ -136,7 +136,7 @@ namespace domp {
     }
     // Perform the mapping here
 
-    log("MASTER::Starting applying requests");
+    log("MASTER::Starting applying READ requests");
     std::list<DOMPMapCommand_t*>::iterator commandIterator;
     for(commandIterator = commands_received.begin(); commandIterator != commands_received.end(); ++commandIterator) {
       auto command = *commandIterator;
@@ -144,9 +144,17 @@ namespace domp {
         log("MASTER::Variable %s not found", command->varName);
         MPI_Abort(MPI_COMM_WORLD, DOMP_VAR_NOT_FOUND_ON_MASTER);
       }
-      log("MASTER::Applying command for nodeId %d", command->nodeId);
+      log("MASTER::Applying READ command for nodeId %d", command->nodeId);
       MasterVariable *masterVariable = varList[command->varName];
-      masterVariable->applyCommand(commandManager, command);
+      masterVariable->applyCommand(commandManager, command, DATA_PHASE_READ);
+    }
+
+    log("MASTER::Starting applying Update requests");
+    for(commandIterator = commands_received.begin(); commandIterator != commands_received.end(); ++commandIterator) {
+      auto command = *commandIterator;
+      log("MASTER::Applying Update command for nodeId %d", command->nodeId);
+      MasterVariable *masterVariable = varList[command->varName];
+      masterVariable->applyCommand(commandManager, command, DATA_PHASE_UPDATE);
       delete(command);
     }
 

@@ -95,34 +95,38 @@ int main(int argc, char **argv) {
     is_output_timing = 0;
     filename         = NULL;
 
-    while ( (opt=getopt(argc,argv,"p:i:n:t:abdo"))!= EOF) {
+    if (DOMP_IS_MASTER) {
+      while ((opt = getopt(argc, argv, "p:i:n:t:abdo")) != EOF) {
         switch (opt) {
-            case 'i': filename=optarg;
-                      break;
-            case 'b': isBinaryFile = 1;
-                      break;
-            case 't': threshold=atof(optarg);
-                      break;
-            case 'n': numClusters = atoi(optarg);
-                      break;
-            case 'o': is_output_timing = 1;
-                      break;
-            case 'd': _debug = 1;
-                      break;
-            case '?': usage(argv[0], threshold);
-                      break;
-            default: usage(argv[0], threshold);
-                      break;
+          case 'i': filename = optarg;
+            break;
+          case 'b': isBinaryFile = 1;
+            break;
+          case 't': threshold = atof(optarg);
+            break;
+          case 'n': numClusters = atoi(optarg);
+            break;
+          case 'o': is_output_timing = 1;
+            break;
+          case 'd': _debug = 1;
+            break;
+          case '?': usage(argv[0], threshold);
+            break;
+          default: usage(argv[0], threshold);
+            break;
         }
+      }
+
+      if (filename == 0 || numClusters <= 1) usage(argv[0], threshold);
+
+      if (is_output_timing) io_timing = wtime();
     }
-
-    if (filename == 0 || numClusters <= 1) usage(argv[0], threshold);
-
-    if (is_output_timing) io_timing = wtime();
 
     // This is for sharing among all nodes
     DOMP_REGISTER(&numObjs, MPI_INT, 1);
     DOMP_REGISTER(&numCoords, MPI_INT, 1);
+    DOMP_REGISTER(&threshold, MPI_FLOAT, 1);
+    DOMP_REGISTER(&numClusters, MPI_INT, 1);
 
     if(DOMP_IS_MASTER) {
         /* read data points from file ------------------------------------------*/
@@ -138,6 +142,8 @@ int main(int argc, char **argv) {
 
         DOMP_EXCLUSIVE(&numCoords, 0, 1);
         DOMP_EXCLUSIVE(&numObjs, 0, 1);
+        DOMP_EXCLUSIVE(&threshold, 0, 1);
+        DOMP_EXCLUSIVE(&numClusters, 0, 1);
         DOMP_EXCLUSIVE(objects, 0, numObjs * numCoords);
     }
     // Sync the memory
@@ -146,6 +152,8 @@ int main(int argc, char **argv) {
         // Slave nodes get the data
         DOMP_SHARED(&numCoords, 0, 1);
         DOMP_SHARED(&numObjs, 0, 1);
+        DOMP_SHARED(&threshold, 0, 1);
+        DOMP_SHARED(&numClusters, 0, 1);
     }
     // Sync the data to all slave nodes
     DOMP_SYNC
@@ -159,10 +167,8 @@ int main(int argc, char **argv) {
     /* membership: the cluster id for each data object */
     membership = (int*) malloc(numObjs * sizeof(int));
     assert(membership != NULL);
-
     clusters = seq_kmeans(objects, numCoords, numObjs, numClusters, threshold,
                           membership, &loop_iterations);
-
     free(objects);
 
     if(DOMP_IS_MASTER) {
