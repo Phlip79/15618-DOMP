@@ -137,7 +137,8 @@ void DOMP::ArrayReduce(std::string varName, void *address, MPI_Datatype type, MP
     }
   }
   void *dataPtr = (char*)address + (offset * varSize);
-  log("Node %d calling ArrayReduce on %s and address %p, pointer %p",rank, varName.c_str(), dataPtr, dataBuffer);
+  log("Node %d calling ArrayReduce on %s and address %p, pointer %p, size=%d",rank, varName.c_str(), dataPtr,
+      dataBuffer, size);
   if (reduceType == REDUCE_ON_MASTER) {
     MPI_Reduce(dataPtr, dataBuffer, size, type, op, 0, MPI_COMM_WORLD);
   } else {

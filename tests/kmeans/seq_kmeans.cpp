@@ -98,27 +98,26 @@ float* seq_kmeans(float *objects,      /* in: [numObjs * numCoords] */
                    int     numClusters,  /* no. clusters */
                    float   threshold,    /* % objects change membership */
                    int    *membership,   /* out: [numObjs] */
-                   int    *loop_iterations)
-{
-    int      i, j, index, loop=0;
-    int     *newClusterSize; /* [numClusters]: no. objects assigned in each
+                   int    *loop_iterations) {
+    int i, j, index, loop = 0;
+    int *newClusterSize; /* [numClusters]: no. objects assigned in each
                                 new cluster */
-    float    delta;          /* % of objects change their clusters */
-    float  *clusters;       /* out: [numClusters * numCoords] */
-    float  *newClusters;    /* [numClusters * numCoords] */
+    float delta;          /* % of objects change their clusters */
+    float *clusters;       /* out: [numClusters * numCoords] */
+    float *newClusters;    /* [numClusters * numCoords] */
 
     /* allocate a 2D space for returning variable clusters[] (coordinates
        of cluster centers) */
-    clusters = (float*)  malloc(numClusters * numCoords * sizeof(float));
+    clusters = (float *) malloc(numClusters * numCoords * sizeof(float));
     assert(clusters != NULL);
 
-    /* pick first numClusters elements of objects[] as initial cluster centers*/
-    for (i=0; i<numClusters; i++)
-        for (j=0; j<numCoords; j++)
-            clusters[i * numCoords + j] = objects[i * numCoords + j];
+    DOMP_SHARED(objects, 0, numClusters * numCoords);
+    DOMP_SYNC;
 
-    /* initialize membership[] */
-    for (i=0; i<numObjs; i++) membership[i] = -1;
+    /* pick first numClusters elements of objects[] as initial cluster centers*/
+    for (i = 0; i < numClusters; i++)
+        for (j = 0; j < numCoords; j++)
+            clusters[i * numCoords + j] = objects[i * numCoords + j];
 
     /* need to initialize newClusterSize and newClusters[0] to all 0 */
     newClusterSize = (int*) calloc(numClusters, sizeof(int));
@@ -134,15 +133,21 @@ float* seq_kmeans(float *objects,      /* in: [numObjs * numCoords] */
     DOMP_SHARED(objects, offset * numCoords, size * numCoords);
     DOMP_SYNC;
 
+    /* initialize membership[] */
+    for (i = offset; i < offset + size; i++) {
+        membership[i] = -1;
+    }
     do {
         delta = 0.0;
 
-        for (i=offset; i<size; i++) {
+        for (i = offset; i < offset + size; i++) {
             /* find the array index of nestest cluster center */
             index = find_nearest_cluster(numClusters, numCoords, &objects[i * numCoords], clusters);
 
             /* if membership changes, increase delta by 1 */
-            if (membership[i] != index) delta += 1.0;
+            if (membership[i] != index) {
+                delta += 1.0;
+            }
 
             /* assign the membership to object i */
             membership[i] = index;
@@ -159,14 +164,16 @@ float* seq_kmeans(float *objects,      /* in: [numObjs * numCoords] */
 
         /* average the sum and replace old cluster centers with newClusters */
         for (i=0; i<numClusters; i++) {
-            for (j=0; j<numCoords; j++) {
+            for (j = 0; j < numCoords; j++) {
                 if (newClusterSize[i] > 0)
-                    clusters[i * numCoords+ j] = newClusters[i * numCoords + j] / newClusterSize[i];
-                newClusters[i * numCoords+ j] = 0.0;   /* set back to 0 */
+                    clusters[i * numCoords + j] = newClusters[i * numCoords + j] / newClusterSize[i];
+                newClusters[i * numCoords + j] = 0.0;   /* set back to 0 */
             }
             newClusterSize[i] = 0;   /* set back to 0 */
         }
-            
+//        if (DOMP_IS_MASTER) {
+//            std::cout<<"Iteration "<<loop<<", delta is "<<delta<<std::endl;
+//        }
         delta /= numObjs;
     } while (delta > threshold && loop++ < 500);
 

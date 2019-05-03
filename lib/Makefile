@@ -1,6 +1,6 @@
 MPI =-DDEBUG_DOMP
 
-DEBUG=1
+DEBUG=0
 CFLAGS=-c -g -O3 -Wall -DDEBUG=$(DEBUG) -std=c++11
 
 SRCS = domp.cpp DataManager.cpp util/SplitList.cpp CommandManager.cpp

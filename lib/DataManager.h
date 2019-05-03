@@ -32,6 +32,7 @@ namespace domp {
 
   enum MPIServerTag {MPI_MAP_REQ= 0, MPI_MAP_RESP, MPI_DATA_CMD, MPI_EXIT_CMD, MPI_EXIT_ACK};
   enum MPICommandType {MPI_DATA_FETCH = 0, MPI_DATA_SEND};
+  enum MPIDataPhaseType {DATA_PHASE_READ, DATA_PHASE_UPDATE};
 
   typedef struct DOMPDataCommand {
     char varName[DOMP_MAX_VAR_NAME];
@@ -93,9 +94,10 @@ class domp::MasterVariable {
     delete(dataList);
   }
 
-  void applyCommand(CommandManager *commandManager, DOMPMapCommand_t *command) {
-    dataList->ReadPhase(command, commandManager);
-    dataList->WritePhase(command);
+  void applyCommand(CommandManager *commandManager, DOMPMapCommand_t *command, MPIDataPhaseType phase) {
+    if (phase == DATA_PHASE_READ)
+      dataList->ReadPhase(command, commandManager);
+    else dataList->WritePhase(command);
   }
 };
 
