@@ -203,13 +203,34 @@ int DOMP::getSizeBytes(const MPI_Datatype &type) const {
 
 void DOMP::PrintProfilingData() {
 #if PROFILING
-if(IsMaster()) {
-  printf("DOMP Sync time           = %10.4f sec\n", this->profiler.syncTime);
-  printf("DOMP Reduce time = %10.4f sec\n", this->profiler.reduceTime);
-  printf("DOMP Total Library time = %10.4f sec\n", this->profiler.reduceTime + this->profiler.syncTime);
-  double totalTime = currentSeconds() - this->profiler.programStart;
-  printf("DOMP Total time = %10.4f sec\n", totalTime);
-}
+  double currentTime = currentSeconds();
+  double libTime = this->profiler.reduceTime + this->profiler.syncTime;
+  double totalTime = currentTime - this->profiler.programStart;
+  if(rank == 0) {
+    double currentTime = currentSeconds();
+    printf("DOMP Master Sync time = %10.4f sec\n", this->profiler.syncTime);
+    printf("DOMP Master Reduce time = %10.4f sec\n", this->profiler.reduceTime);
+    printf("DOMP Master Library time = %10.4f sec\n", libTime);
+    double totalTime = currentTime - this->profiler.programStart;
+    printf("DOMP Master Total time = %10.4f sec\n", totalTime);
+  }
+  double clusterLibTime, slaveLibTime;
+  double clusterTotalTime, slaveTotalTime;
+  MPI_Reduce(&libTime, &clusterLibTime, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&totalTime, &clusterTotalTime, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  if (rank == 0) {
+    printf("DOMP Cluster Library time = %10.4f sec\n", clusterLibTime/clusterSize);
+    printf("DOMP Cluster Total time = %10.4f sec\n", clusterTotalTime/clusterSize);
+    if (clusterSize > 1) {
+      slaveLibTime = (clusterLibTime - libTime)/(clusterSize - 1);
+      slaveTotalTime = (clusterTotalTime - totalTime)/(clusterSize - 1);
+    } else {
+      slaveLibTime = 0;
+      slaveTotalTime = 0;
+    }
+    printf("DOMP Slave Library time = %10.4f sec\n", slaveLibTime);
+    printf("DOMP Slave Total time = %10.4f sec\n", slaveTotalTime);
+  }
 #endif
 }
 

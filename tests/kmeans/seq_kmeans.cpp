@@ -181,8 +181,9 @@ float* seq_kmeans(float *objects,      /* in: [numObjs * numCoords] */
         }
         delta /= numObjs;
         MPI_Barrier(MPI_COMM_WORLD);
-//        if (loop == 0) break;
-    } while (delta > threshold && loop++ < 500);
+//    } while (delta > threshold && loop++ < 500);
+      // For consistent benchamrking, we are using a fixed number of iterations
+    } while (loop++ < 250);
 
     *loop_iterations = loop + 1;
 

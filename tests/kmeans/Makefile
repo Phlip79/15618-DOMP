@@ -62,13 +62,13 @@ SEQ_OBJ     = $(SEQ_SRC:%.cpp=%.o)
 
 $(SEQ_OBJ): $(H_FILES)
 
-seq: seq_main
-seq_main: $(SEQ_OBJ) $(H_FILES)
-	$(MPICC) $(LDFLAGS) -O2 -o $(OUTPUT_DIR)/seq_main $(SEQ_OBJ) $(LIBS)
+seq: seq_kmeans
+seq_kmeans: $(SEQ_OBJ) $(H_FILES)
+	$(MPICC) $(LDFLAGS) -O2 -o $(OUTPUT_DIR)/seq_kmeans $(SEQ_OBJ) $(LIBS)
 
 #---------------------------------------------------------------------
 clean:
-	rm -rf *.o seq_main \
+	rm -rf *.o seq_kmeans \
 	       core* .make.state gmon.out     \
                *.cluster_centres *.membership \
                Image_data/*.cluster_centres   \
