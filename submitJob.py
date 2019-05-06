@@ -34,7 +34,7 @@ def generateFileName(root, extension):
 
 # Create shell script to submit to qsub
 # Results stored in file 'OUTROOT-XXXX.out' with specified number of digits
-def generateScript(scriptName = "latedays.sh", argString = "", nodes=1, proc=24):
+def generateScript(scriptName = "latedays.sh", argString = "", nodes=2, proc=4):
     try:
         scriptFile = open(scriptName, 'w')
     except Exception as e:
@@ -58,28 +58,29 @@ def generateScript(scriptName = "latedays.sh", argString = "", nodes=1, proc=24)
     # scriptFile.write("#PBS -l nodes=%d:ppn=%d\n"%(nodes, proc))
     # scriptFile.write("\n")
     scriptFile.write('''
-    #
-                #  make a list of allocated nodes(cores)
-                #  Note that if multiple jobs run in same directory, use different names
-                #     for example, add on jobid nmber, e.g. nodes.$PBS_JOBID.
-                cat $PBS_NODEFILE > nodes.$PBS_JOBID
-                
-                NODE_LIST=`cat $PBS_NODEFILE `
-                #
-                # Just for kicks, see which nodes we got.
-                echo "Nodelist::$NODE_LIST"
-                echo "NodeCount::$PBS_NP"
+#
+#  make a list of allocated nodes(cores)
+#  Note that if multiple jobs run in same directory, use different names
+#     for example, add on jobid nmber, e.g. nodes.$PBS_JOBID.
+cat $PBS_NODEFILE > nodes.$PBS_JOBID
+
+NODE_LIST=`cat $PBS_NODEFILE `
+#
+# Just for kicks, see which nodes we got.
+echo "Nodelist::$NODE_LIST"
+echo "NodeCount::$PBS_NP"
     ''');
     scriptFile.write("# Configure to place threads on successive processors\n")
     scriptFile.write("OMP_PLACES=cores\n")
     scriptFile.write("OMP_PROC_BIND=close\n")
     scriptFile.write("\n")
-    scriptFile.write("mpirun -np $PBS_NP -machinefile nodes.$PBS_JOBID %s\n" % argString)
+    scriptFile.write("/opt/opt-openmpi/1.8.5rc1/bin/mpirun -np $PBS_NP -machinefile nodes.$PBS_JOBID %s\n" % argString)
     scriptFile.close()
     return True
 
 def command_line(cmd):
     cmdline = " ".join(cmd)
+    print "Executing:" + cmdline
     try:
         process = subprocess.Popen(cmd)
     except Exception as e:
@@ -122,7 +123,8 @@ def run(name, args):
     if generateScript(scriptName, argString, nodes, proc):
         print "Generated script %s" % scriptName
         if submitJob:
-            submit(scriptName, "-l walltime=0:60:00,nodes="+str(nodes)+":ppn="+str(proc))
+            submit(scriptName, "-l walltime=0:01:00,nodes=%d:ppn=%d"%(nodes, proc))
+            #submit(scriptName, "-l walltime=0:01:00")
 
 if __name__ == "__main__":
     run(sys.argv[0], sys.argv[1:])
