@@ -42,6 +42,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <limits.h>
 
 #include "kmeans.h"
 #include "mpi.h"
@@ -130,13 +132,22 @@ float* seq_kmeans(float *objects,      /* in: [numObjs * numCoords] */
     int size;
     DOMP_REGISTER(membership, MPI_INT, numObjs);
 
-
     DOMP_PARALLELIZE(numObjs, &offset, &size);
     DOMP_SHARED(objects, offset * numCoords, size * numCoords);
     DOMP_EXCLUSIVE(membership, offset, size);
     DOMP_SYNC;
 
-    std::cout<<"Node::"<<DOMP_NODE_ID<<", offset="<<offset<<",size="<<size<<std::endl;
+    // Get the name of the processor
+    char processor_name[MPI_MAX_PROCESSOR_NAME];
+    int name_len;
+    MPI_Get_processor_name(processor_name, &name_len);
+    char hostname[HOST_NAME_MAX];
+    gethostname(hostname, HOST_NAME_MAX);
+
+    std::cout<<"Node::"<<DOMP_NODE_ID<<", hostname::"<<hostname<<", processor::"<<processor_name<<", "
+                                                                                                 "offset="<<offset<<","
+                                                                                               "size="<<size<<std::endl;
+
 
     /* initialize membership[] */
     for (i = offset; i < offset + size; i++) {
@@ -180,7 +191,6 @@ float* seq_kmeans(float *objects,      /* in: [numObjs * numCoords] */
             std::cout<<"Iteration "<<loop<<", delta is "<<delta<<std::endl;
         }
         delta /= numObjs;
-        MPI_Barrier(MPI_COMM_WORLD);
 //    } while (delta > threshold && loop++ < 500);
       // For consistent benchamrking, we are using a fixed number of iterations
     } while (loop++ < 250);

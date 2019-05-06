@@ -51,8 +51,8 @@ class domp::Fragment {
   int size;
   int end;
   std::set <int> nodes;
-  friend SplitList;
-  friend DoublyLinkedList<Fragment>;
+  friend class SplitList;
+  friend class DoublyLinkedList<Fragment>;
   Fragment *next;
   Fragment *prev;
  public:

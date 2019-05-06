@@ -4,8 +4,8 @@
 #include "logisticRegression.h"
 #include "../../lib/domp.h"
 #include <fstream>
-#include <chrono>
 #include <unistd.h>     /* getopt() */
+#include <stdlib.h> /*atoi*/
 using namespace std;
 using namespace domp;
 
@@ -175,7 +175,6 @@ void test_lr(char *inFile, char *lFile) {
         cout << "Error in opening label file" << endl;
     }
 
-    auto start = chrono::high_resolution_clock::now();
     DOMP_TIMER_INIT();
 
 
@@ -244,12 +243,6 @@ void test_lr(char *inFile, char *lFile) {
     }
 
     if (DOMP_IS_MASTER) {
-
-        auto stop = chrono::high_resolution_clock::now();
-        auto duration = chrono::duration_cast<chrono::milliseconds>(stop - start);
-        cout << "Total time is: ";
-        cout << duration.count() << endl;
-
         // test data inputs
         int test_X[2][6] = {
                 {1, 0, 1, 0, 0, 0},

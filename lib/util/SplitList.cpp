@@ -45,7 +45,7 @@ namespace domp {
       // Case 2: |X||
       if (start == current->start && end < current->end) {
         log("Found Case 2:: Required[%d, %d] Current[%d, %d]", start, end, current->start, current->end);
-        auto nextNode = Split(current, end, nodeId, SPLIT_ACCESS(accessType), USE_FIRST);
+        Fragment* nextNode = Split(current, end, nodeId, SPLIT_ACCESS(accessType), USE_FIRST);
         if (nextNode != NULL && IS_FETCH(accessType)) {
           CreateCommand(commandManager, nodeId, current, varName);
         }
@@ -55,7 +55,7 @@ namespace domp {
       else if (start > current->start && end >= current->end) {
         // Same case for both Exclusive fetch and shared fetch
         log("Found Case 3:: Required[%d, %d] Current[%d, %d]", start, end, current->start, current->end);
-        auto nextNode = Split(current, start - 1, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
+        Fragment* nextNode = Split(current, start - 1, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
         if (nextNode != NULL && IS_FETCH(accessType)) {
           CreateCommand(commandManager, nodeId, nextNode, varName);
           start = nextNode->end + 1;
@@ -70,10 +70,10 @@ namespace domp {
         // We need to Split twice
         // First Split using second
         log("Found Case 4:: Required[%d, %d] Current[%d, %d]", start, end, current->start, current->end);
-        auto nextNode = Split(current, start - 1, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
+        Fragment* nextNode = Split(current, start - 1, nodeId, SPLIT_ACCESS(accessType), USE_SECOND);
         if (nextNode != NULL) {
           // Second Split using first. See last argument as true here.
-          auto nextNextNode = Split(nextNode, end, nodeId, SPLIT_ACCESS(accessType), USE_FIRST);
+          Fragment* nextNextNode = Split(nextNode, end, nodeId, SPLIT_ACCESS(accessType), USE_FIRST);
           if (nextNextNode != NULL && IS_FETCH(accessType)) {
             CreateCommand(commandManager, nodeId, nextNode, varName);
           }
@@ -108,7 +108,7 @@ namespace domp {
       if (current->nodes.count(nodeId) != 0) return NULL;
     }
     // Create a copy of the fragment
-    auto fragment = new Fragment(current);
+    Fragment* fragment = new Fragment(current);
 
     fragment->update(splitPoint+1, current->end);
     current->update(current->start, splitPoint);

@@ -7,7 +7,6 @@
 #include "DataManager.h"
 #include "CommandManager.h"
 #include <mpi.h>
-#include <thread>
 using namespace domp;
 namespace domp {
 
@@ -32,7 +31,7 @@ namespace domp {
   void DataManager::requestData(std::string varName, int start, int size, MPIAccessType accessType) {
     // Keep accumulating all data requests. Send it at once in triggerMap function() called when synchronize is called
     // Thread-safety not required. Assuming that caller is calling this function sequentially
-    auto command = new DOMPMapCommand_t();
+    DOMPMapCommand_t *command = new DOMPMapCommand_t();
     strncpy(command->varName, varName.c_str(), varName.size());
     command->accessType = accessType;
     command->size = size;
@@ -48,7 +47,7 @@ namespace domp {
       MPI_Request *requests = new MPI_Request[numRequests];
       MPI_Status *status = new MPI_Status[numRequests];
       for(int i = 0; i < numRequests; i++) {
-        auto *command = reinterpret_cast<DOMPDataCommand_t *>(buffer + i *sizeof(DOMPDataCommand_t));
+        DOMPDataCommand_t *command = reinterpret_cast<DOMPDataCommand_t *>(buffer + i *sizeof(DOMPDataCommand_t));
         std::pair<char*, int> ret = dompObject->mapDataRequest(command->varName, command->start, command->size);
         if (command->commandType == MPI_DATA_FETCH) {
           log("Node %d::[%d] DATAFETCH Var[%s], start[%d], size[%d], bytes[%d], tag[%d] Address[%p] Node[%d]", rank, i,
@@ -102,7 +101,7 @@ namespace domp {
     if (status.MPI_ERROR == MPI_SUCCESS && status.MPI_SOURCE == 0) {
       int count;
       MPI_Get_count(&status, MPI_BYTE, &count);
-      auto *buffer = new char[count];
+      char *buffer = new char[count];
       MPI_Recv(buffer, count, MPI_BYTE, status.MPI_SOURCE, status.MPI_TAG, mpi_comm, NULL);
       handleMapResponse(buffer, count);
       delete(buffer);
@@ -139,7 +138,7 @@ namespace domp {
     log("MASTER::Starting applying READ requests");
     std::list<DOMPMapCommand_t*>::iterator commandIterator;
     for(commandIterator = commands_received.begin(); commandIterator != commands_received.end(); ++commandIterator) {
-      auto command = *commandIterator;
+      DOMPMapCommand_t* command = *commandIterator;
       if (0 == varList.count(std::string(command->varName))){
         log("MASTER::Variable %s not found", command->varName);
         MPI_Abort(MPI_COMM_WORLD, DOMP_VAR_NOT_FOUND_ON_MASTER);
@@ -151,7 +150,7 @@ namespace domp {
 
     log("MASTER::Starting applying Update requests");
     for(commandIterator = commands_received.begin(); commandIterator != commands_received.end(); ++commandIterator) {
-      auto command = *commandIterator;
+      DOMPMapCommand_t* command = *commandIterator;
       log("MASTER::Applying Update command for nodeId %d", command->nodeId);
       MasterVariable *masterVariable = varList[command->varName];
       masterVariable->applyCommand(commandManager, command, DATA_PHASE_UPDATE);
@@ -206,7 +205,7 @@ namespace domp {
       int numRequests = count / sizeof(DOMPMapCommand_t);
       log("MASTER::Received %d requests from node %d", numRequests, status->MPI_SOURCE);
       for (int i = 0; i < numRequests; i++) {
-        auto cmd = new DOMPMapCommand_t();
+        DOMPMapCommand_t *cmd = new DOMPMapCommand_t();
         memcpy(cmd, buffer + i *sizeof(DOMPMapCommand_t), sizeof(DOMPMapCommand_t));
         log("MASTER::Received request Node[%d], varName[%s], start[%d], size[%d]",status->MPI_SOURCE, cmd->varName,
             cmd->start, cmd->size);

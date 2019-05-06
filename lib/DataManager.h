@@ -7,12 +7,9 @@
 
 #include <iostream>
 #include <list>
-#include <mutex>
 #include <utility>
 #include <mpi.h>
 #include <map>
-#include <thread>
-#include <condition_variable>
 #include "domp.h"
 #include "CommandManager.h"
 #include "util/SplitList.h"

@@ -24,7 +24,7 @@ namespace domp {
   std::pair<char *, int> CommandManager::GetCommands(int rank) {
     list<DOMPDataCommand_t *> *commandList = commandMap[rank];
     int size = commandList->size() * sizeof(DOMPDataCommand_t);
-    auto *buffer = new char[size];
+    char *buffer = new char[size];
     int i = 0;
     for(std::list<DOMPDataCommand_t*>::iterator it = commandList->begin(); it != commandList->end(); ++it) {
      memcpy(buffer + i * sizeof(DOMPDataCommand_t), *it, sizeof(DOMPDataCommand_t));
@@ -33,8 +33,8 @@ namespace domp {
     return std::make_pair(buffer, size);
   };
   void CommandManager::InsertCommand(char* varName, int start, int size, int source, int destination) {
-    auto destinationCommand = new DOMPDataCommand_t();
-    auto sourceCommand = new DOMPDataCommand_t();
+    DOMPDataCommand_t* destinationCommand = new DOMPDataCommand_t();
+    DOMPDataCommand_t* sourceCommand = new DOMPDataCommand_t();
 
     strncpy(destinationCommand->varName, varName, DOMP_MAX_VAR_NAME);
     strncpy(sourceCommand->varName, varName, DOMP_MAX_VAR_NAME);

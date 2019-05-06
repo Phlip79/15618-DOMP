@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <chrono>
 #include <unistd.h>     /* getopt() */
 using namespace std;
 
@@ -179,7 +178,7 @@ void test_lr(char *inFile, char *lFile) {
         cout << "Error in opening label file" << endl;
     }
 
-    auto start = chrono::high_resolution_clock::now();
+    double start = wtime();
 
 
     // training data
@@ -223,10 +222,10 @@ void test_lr(char *inFile, char *lFile) {
         }
     }
 
-    auto stop = chrono::high_resolution_clock::now();
-    auto duration = chrono::duration_cast<chrono::milliseconds>(stop - start);
+    double stop = wtime();
+    double duration = stop - start;
     cout << "Total time is: ";
-    cout << duration.count() << endl;
+    cout << duration << endl;
 
     // test data
     int test_X[2][6] = {

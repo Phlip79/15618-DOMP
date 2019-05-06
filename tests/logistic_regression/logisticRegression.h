@@ -24,3 +24,5 @@ public:
     void softmax(double*);
     void predict(int*, double*);
 };
+
+double  wtime(void);

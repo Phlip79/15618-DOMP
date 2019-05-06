@@ -2,7 +2,7 @@ DEBUG=0
 PROFILING=1
 MPICC=mpic++
 OMP=-fopenmp -msse4.2 -msse2 -msse3
-CFLAGS=-g -O3 -Wall -DDEBUG=$(DEBUG) -DPROFILING=$(PROFILING) -std=c++11
+CFLAGS=-g -O3 -Wall -DDEBUG=$(DEBUG) -DPROFILING=$(PROFILING)
 LDFLAGS= -lm
 
 all: arraySum testDataTransfer kmeans logisticRegression logisticRegressionSeq
@@ -26,10 +26,10 @@ testDataTransfer: DOMP_LIB tests/testDataTransfer.cpp
 	$(MPICC) $(CFLAGS) $(OMP) -o build/testDataTransfer tests/testDataTransfer.cpp $(DOMP_LIB) $(LDFLAGS)
 
 logisticRegression: DOMP_LIB tests/logistic_regression/logisticRegression.cpp
-	$(MPICC) $(CFLAGS) $(OMP) -o build/logisticRegression tests/logistic_regression/logisticRegression.cpp $(DOMP_LIB) $(LDFLAGS)
+	$(MPICC) $(CFLAGS) $(OMP) -o build/logisticRegression tests/logistic_regression/logisticRegression.cpp tests/logistic_regression/wtime.cpp $(DOMP_LIB) $(LDFLAGS)
 
 logisticRegressionSeq: DOMP_LIB tests/logistic_regression/logisticRegressionSeq.cpp
-	$(MPICC) $(CFLAGS) $(OMP) -o build/logisticRegressionSeq tests/logistic_regression/logisticRegressionSeq.cpp $(DOMP_LIB) $(LDFLAGS)
+	$(MPICC) $(CFLAGS) $(OMP) -o build/logisticRegressionSeq tests/logistic_regression/logisticRegressionSeq.cpp tests/logistic_regression/wtime.cpp $(DOMP_LIB) $(LDFLAGS)
 
 kmeans:
 	$(MAKE) -C tests/kmeans

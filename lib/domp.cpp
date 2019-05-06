@@ -34,7 +34,7 @@ DOMP::DOMP(int *argc, char ***argv) {
 
   dataBuffer = NULL;
 
-  if(void *buffer = std::realloc(dataBuffer, DOMP_BUFFER_INIT_SIZE)) {
+  if(void *buffer = realloc(dataBuffer, DOMP_BUFFER_INIT_SIZE)) {
     dataBuffer = buffer;
     log("Buffer returned by realloc is %p", buffer);
     currentBufferSize = DOMP_BUFFER_INIT_SIZE;
@@ -126,7 +126,7 @@ void DOMP::ArrayReduce(std::string varName, void *address, MPI_Datatype type, MP
   int totalSize =  varSize * size;
   if (totalSize > currentBufferSize) {
     log("Node %d::Called realloc with pointer %p and required size:%d", rank, dataBuffer, totalSize);
-    if(void *buffer = std::realloc(dataBuffer, totalSize)) {
+    if(void *buffer = realloc(dataBuffer, totalSize)) {
       log("Node %d::After realloc with pointer %p", rank, buffer);
       dataBuffer = buffer;
       currentBufferSize = totalSize;
@@ -184,7 +184,7 @@ std::pair<char*, int> DOMP::mapDataRequest(char* varName, int start, int size) {
 
   Variable *var = varList[key];
   int varSize = sizeof(int);
-  auto type = var->getType();
+  MPI_Datatype type = var->getType();
   varSize = getSizeBytes(type);
 
   int offset = start * varSize;
