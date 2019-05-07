@@ -31,21 +31,25 @@ fi
 processorCount=(16 8 4 2 1)
 suffix=$1
 
+input='data/logistic/input10m.txt'
+label='data/logistic/label10m.txt'
+
+
 echo "--------------------------------------------------------------------------------"
 uptime
 echo "--------------------------------------------------------------------------------"
 
 # process for multiple nodes
-for (( pCount=14; pCount>=1; pCount-- )); do
-    echo "Processing np $pCount"
-    command='./submitJob.py -a "build/logisticRegression -i data/logistic/input1m.txt -l data/logistic/label1m.txt" -s'"${suffix}_${pCount}_24 -n $pCount -p 24"
+for (( np=14; np>=1; np-- )); do
+    echo "Processing np np"
+    command="./submitJob.py -a 'build/logisticRegression -i $input -l $label' -s ${suffix}_${np}_24 -n ${np} -p 24"
     echo "Command is $command"
     eval ${command}
 done
 # Process for single node also
 for np in ${processorCount[@]}; do
     echo "Processing np $np"
-    command="./submitJob.py -a 'build/logisticRegression -i data/logistic/input1m.txt -l data/logistic/label1m.txt' -s ${suffix}_1_${np} -n 1 -p $np"
+    command="./submitJob.py -a 'build/logisticRegression -i $input -l $label' -s ${suffix}_1_${np} -n 1 -p $np"
     echo "Command is $command"
     eval ${command}
 done

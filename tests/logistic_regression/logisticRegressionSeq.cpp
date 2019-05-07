@@ -18,35 +18,35 @@ LogisticRegressionSeq::LogisticRegressionSeq(int size, int in, int out) : Logist
     n_out = out;
 
     // initialize W, b
-    W = new double *[n_out];
-    for (int i = 0; i < n_out; i++) W[i] = new double[n_in];
+    W = new double [n_out * n_in];
+//    for (int i = 0; i < n_out; i++) W[i] = new double[n_in];
     b = new double[n_out];
 
     for (int i = 0; i < n_out; i++) {
         for (int j = 0; j < n_in; j++) {
-            W[i][j] = 0;
+            W[i * n_in + j] = 0;
         }
         b[i] = 0;
     }
 
-    W_temp = new double *[n_out];
-    for (int i = 0; i < n_out; i++) W_temp[i] = new double[n_in];
+    W_temp = new double [n_out * n_in];
+//    for (int i = 0; i < n_out; i++) W_temp[i] = new double[n_in];
     b_temp = new double[n_out];
 
     for (int i = 0; i < n_out; i++) {
         for (int j = 0; j < n_in; j++) {
-            W_temp[i][j] = 0;
+            W_temp[i * n_in + j] = 0;
         }
         b_temp[i] = 0;
     }
 }
 
 LogisticRegressionSeq::~LogisticRegressionSeq()  {
-    for(int i=0; i<n_out; i++) delete[] W_temp[i];
+//    for(int i=0; i<n_out; i++) delete[] W_temp[i];
     delete[] W_temp;
     delete[] b_temp;
 
-    for(int i=0; i<n_out; i++) delete[] W[i];
+//    for(int i=0; i<n_out; i++) delete[] W[i];
     delete[] W;
     delete[] b;
 }
@@ -59,7 +59,7 @@ void LogisticRegressionSeq::train(int *x, int *y, double lr) {
     for(int i=0; i<n_out; i++) {
         p_y_given_x[i] = 0;
         for(int j=0; j<n_in; j++) {
-            p_y_given_x[i] += W[i][j] * x[j];
+            p_y_given_x[i] += W[i * n_in + j] * x[j];
         }
         p_y_given_x[i] += b[i];
     }
@@ -69,7 +69,7 @@ void LogisticRegressionSeq::train(int *x, int *y, double lr) {
         dy[i] = y[i] - p_y_given_x[i];
 
         for(int j=0; j<n_in; j++) {
-            W_temp[i][j] += lr * dy[i] * x[j] / N;
+            W_temp[i * n_in + j] += lr * dy[i] * x[j] / N;
         }
 
         b_temp[i] += lr * dy[i] / N;
@@ -95,7 +95,7 @@ void LogisticRegressionSeq::predict(int *x, double *y) {
     for(int i=0; i<n_out; i++) {
         y[i] = 0;
         for(int j=0; j<n_in; j++) {
-            y[i] += W[i][j] * x[j];
+            y[i] += W[i* n_in + j] * x[j];
         }
         y[i] += b[i];
     }
@@ -214,7 +214,7 @@ void test_lr(char *inFile, char *lFile) {
 
         for (int i = 0; i < n_out; i++) {
             for (int j = 0; j < n_in; j++) {
-                classifier.W[i][j] = classifier.W_temp[i][j];
+                classifier.W[i * n_in + j] = classifier.W_temp[i * n_in + j];
             }
             //cout << "HERE: " << classifier.W[i][0] << endl;
             classifier.b[i] = classifier.b_temp[i];
@@ -248,7 +248,7 @@ void test_lr(char *inFile, char *lFile) {
     //weights and bias
     for (int i = 0; i < n_out; i++) {
         for (int j = 0; j < n_in; j++) {
-            cout << classifier.W[i][j] << " ";
+            cout << classifier.W[i * n_in + j] << " ";
         }
         cout << endl;
         cout << classifier.b[i] << endl;

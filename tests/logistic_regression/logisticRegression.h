@@ -4,9 +4,9 @@ public:
     int N;  // num of inputs
     int n_in;
     int n_out;
-    double **W;
+    double *W;
     double *b;
-    double **W_temp;
+    double *W_temp;
     double *b_temp;
     LogisticRegression() {}
     LogisticRegression(int, int, int);

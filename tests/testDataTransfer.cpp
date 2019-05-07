@@ -16,26 +16,24 @@ void compute(int total_size, int iterations) {
   DOMP_REGISTER(arr, MPI_INT, total_size);
   DOMP_PARALLELIZE(total_size, &offset, &size);
 
-  int nextOffset = ((offset + size) >= total_size)?0:offset+size;
-  DOMP_EXCLUSIVE(arr, offset, size);
-  DOMP_SYNC;
-
   // Initialize your own array
   for (i = offset; i < (offset + size); i++)
     arr[i] = i;
 
-  DOMP_TIMER_INIT()
+  DOMP_EXCLUSIVE(arr, offset, size);
+  DOMP_SYNC;
+
+  int nextOffset = ((offset + size) >= total_size)?0:offset+size;
   for(int it = 0; it < iterations; it++) {
     int sum = 0;
     DOMP_EXCLUSIVE(arr, offset, size);
     // Fetch the data from neighbour
     DOMP_SHARED(arr, nextOffset, size);
     DOMP_SYNC;
-#pragma omp parallel
+    #pragma omp parallel
     {
-#pragma omp for reduction(+ : sum)
+      #pragma omp for reduction(+ : sum)
       for (i = offset; i < (offset + size); i++) {
-        // Array sum
         // Add neighbours value to own value
         int nei = (i + size) % total_size;
         arr[i] += arr[nei];
