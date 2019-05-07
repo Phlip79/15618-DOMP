@@ -230,12 +230,15 @@ void DOMP::PrintProfilingData() {
     }
     printf("DOMP Slave Library time = %10.4f sec\n", slaveLibTime);
     printf("DOMP Slave Total time = %10.4f sec\n", slaveTotalTime);
+    printf("DOMP Cluster Size = %d\n", clusterSize);
   }
 #endif
 }
 
 void DOMP::InitProfiler() {
   this->profiler.programStart = currentSeconds();
+  this->profiler.syncTime = 0;
+  this->profiler.reduceTime = 0;
 }
 
 }

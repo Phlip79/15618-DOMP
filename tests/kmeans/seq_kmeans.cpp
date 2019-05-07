@@ -193,7 +193,7 @@ float* seq_kmeans(float *objects,      /* in: [numObjs * numCoords] */
         delta /= numObjs;
 //    } while (delta > threshold && loop++ < 500);
       // For consistent benchamrking, we are using a fixed number of iterations
-    } while (loop++ < 250);
+    } while (loop++ < 5000);
 
     *loop_iterations = loop + 1;
 

@@ -24,20 +24,14 @@
 # ------------------------------------------------------------------------------
 
 if [[ "$#" -ne 1 ]]; then
-    echo "Illegal number of parameters. Arguments are <OUTPUT CSV FILE>"
+    echo "Illegal number of parameters. Arguments are <suffix>"
     exit 1
 fi
 
-#clusterSize=(2 4 6 8 16 32 64 128)
-#processorCount=(128 64 32 16 8 4 2 1)
 inputs=('kmeans04.dat')
-clusterSize=(128)
-processorCount=(128 64 32 16 8 4 2 1)
-dataDirectory='data/kmeans'
-executablePath='build/seq_kmeans'
-outputfile=$1
-columns="inPutFile,ClusterSize,NP,LibTime,CompTime,TotalTime"
-echo ${columns} > ${outputfile}
+clusterSize=(16)
+processorCount=(16 8 4 2 1)
+suffix=$1
 
 echo "--------------------------------------------------------------------------------"
 uptime
@@ -45,19 +39,22 @@ echo "--------------------------------------------------------------------------
 
 for input in ${inputs[@]}; do
     echo "Processing file $input"
-    for np in ${processorCount[@]}; do
-        echo "Processing np $np"
-        for cluster in ${clusterSize[@]}; do
-            echo "Processing cluster $cluster"
-            command="mpiexec -np $np $executablePath -o -n $cluster -i $dataDirectory/${input} |grep 'DOMP'"
+    for cluster in ${clusterSize[@]}; do
+        echo "Processing cluster $cluster"
+        # process for multiple nodes
+        for (( pCount=14; pCount>=1; pCount-- )); do
+            echo "Processing np $pCount"
+            command='./submitJob.py -a "build/seq_kmeans -o -n 16 -i data/kmeans/kmeans04.dat" -s '"${suffix}_${pCount}_24 -n $pCount -p 24"
             echo "Command is $command"
-            output=$($command)
-            libTime=$(echo "${output}" | grep 'DOMP Library time' | awk '{print $5}')
-            totalTime=$(echo "${output}" | grep 'DOMP Total time' | awk '{print $5}')
-            computationTime=$(echo "scale=2; ${totalTime} - ${libTime}" | bc)
-            testString=${input}','${cluster}','${np}','${libTime}','${computationTime}','${totalTime}
-            echo ${testString}
-            echo ${testString} >> ${outputfile}
+            eval ${command}
+        done
+        # Process for single node also
+        for np in ${processorCount[@]}; do
+            echo "Processing np $np"
+            command="./submitJob.py -a 'build/seq_kmeans -o -n 16 -i data/kmeans/kmeans04.dat' -s ${suffix}_1_${np} -n 1 -p $np"
+            echo "Command is $command"
+            eval ${command}
         done
     done
 done
+#rm -f ${hostFile}

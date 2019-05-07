@@ -34,7 +34,7 @@ def generateFileName(root, extension):
 
 # Create shell script to submit to qsub
 # Results stored in file 'OUTROOT-XXXX.out' with specified number of digits
-def generateScript(scriptName = "latedays.sh", argString = "", nodes=2, proc=4):
+def generateScript(scriptName = "latedays.sh", argString = "", msgString = ""):
     try:
         scriptFile = open(scriptName, 'w')
     except Exception as e:
@@ -74,7 +74,9 @@ echo "NodeCount::$PBS_NP"
     scriptFile.write("OMP_PLACES=cores\n")
     scriptFile.write("OMP_PROC_BIND=close\n")
     scriptFile.write("\n")
-    scriptFile.write("/opt/opt-openmpi/1.8.5rc1/bin/mpirun -np $PBS_NP -machinefile nodes.$PBS_JOBID %s\n" % argString)
+    scriptFile.write("/opt/opt-openmpi/1.8.5rc1/bin/mpirun -np $PBS_NP -machinefile nodes.$PBS_JOBID --bind-to-core "
+                     "--oversubscribe -report-bindings %s\n" % argString)
+    scriptFile.write("rm -f nodes.$PBS_JOBID\n")
     scriptFile.close()
     return True
 
@@ -120,11 +122,10 @@ def run(name, args):
             proc = int(val)
     uniqueId = generateId(digits)
     scriptName = generateFileName(scriptRoot, scriptExtension)
-    if generateScript(scriptName, argString, nodes, proc):
+    if generateScript(scriptName, argString):
         print "Generated script %s" % scriptName
         if submitJob:
-            submit(scriptName, "-l walltime=0:01:00,nodes=%d:ppn=%d"%(nodes, proc))
-            #submit(scriptName, "-l walltime=0:01:00")
+            submit(scriptName, "-l walltime=0:60:00,nodes=%d:ppn=%d"%(nodes, proc))
 
 if __name__ == "__main__":
     run(sys.argv[0], sys.argv[1:])
