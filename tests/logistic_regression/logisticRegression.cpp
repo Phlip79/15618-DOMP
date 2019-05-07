@@ -117,122 +117,74 @@ void test_lr(char *inFile, char *lFile) {
     int *train_X;
     int *train_Y;
 
-    // This is for sharing among all nodes
-    DOMP_REGISTER(&train_N, MPI_INT, 1);
+    ifstream inputFile (inFile);
+    string line;
+    if (inputFile.is_open()) {
+        getline(inputFile, line);
+        train_N = atoi(line.c_str());
 
-    if (DOMP_IS_MASTER) {
-        ifstream inputFile(inFile);
-        string line;
-        if (inputFile.is_open()) {
-            getline(inputFile, line);
-            train_N = atoi(line.c_str());
-
-            train_X = new int[train_N * 6];
-            train_Y = new int[train_N * 2];
-
-            int i = 0;
-            string delimiter = ",";
-            while (getline(inputFile, line)) {
-                size_t pos = 0;
-                string token;
-                while ((pos = line.find(delimiter)) != string::npos) {
-                    token = line.substr(0, pos);
-                    train_X[i] = atoi(token.c_str());
-                    line.erase(0, pos + delimiter.length());
-                    i++;
-                }
-                token = line.substr(0, pos);
-                train_X[i] = atoi(token.c_str());
-                i++;
-            }
-            inputFile.close();
-        } else {
-            cout << "Error in opening input file" << endl;
-        }
-
-        ifstream labelFile(lFile);
-        if (labelFile.is_open()) {
-            getline(labelFile, line);
-
-            int i = 0;
-            string delimiter = ",";
-            while (getline(labelFile, line)) {
-                size_t pos = 0;
-                string token;
-                while ((pos = line.find(delimiter)) != string::npos) {
-                    token = line.substr(0, pos);
-                    train_Y[i] = atoi(token.c_str());
-                    line.erase(0, pos + delimiter.length());
-                    i++;
-                }
-                token = line.substr(0, pos);
-                train_Y[i] = atoi(token.c_str());
-                i++;
-            }
-            labelFile.close();
-        } else {
-            cout << "Error in opening label file" << endl;
-        }
-
-        DOMP_REGISTER(train_X, MPI_INT, train_N * n_in);
-        DOMP_REGISTER(train_Y, MPI_INT, train_N * n_out);
-
-        // Register the whole data
-        DOMP_EXCLUSIVE(train_X, 0, train_N * n_in);
-        DOMP_EXCLUSIVE(train_Y, 0, train_N * n_out);
-
-        DOMP_EXCLUSIVE(&train_N, 0, 1);
-    }
-
-    DOMP_SYNC
-    if (!DOMP_IS_MASTER) {
-        // Fetch the data from master node
-        DOMP_SHARED(&train_N, 0, 1);
-    }
-    DOMP_SYNC
-    if (!DOMP_IS_MASTER) {
-        // Allocate memory on other nodes
         train_X = new int[train_N * 6];
         train_Y = new int[train_N * 2];
 
-        DOMP_REGISTER(train_X, MPI_INT, train_N * n_in);
-        DOMP_REGISTER(train_Y, MPI_INT, train_N * n_out);
+        int i = 0;
+        string delimiter = ",";
+        while(getline(inputFile, line)) {
+            size_t pos = 0;
+            string token;
+            while ((pos = line.find(delimiter)) != string::npos) {
+                token = line.substr(0, pos);
+                train_X[i] = atoi(token.c_str());
+                line.erase(0, pos + delimiter.length());
+                i++;
+            }
+            token = line.substr(0, pos);
+            train_X[i] = atoi(token.c_str());
+            i++;
+        }
+        inputFile.close();
+    }
+    else {
+        cout << "Error in opening input file" << endl;
+    }
+
+    ifstream labelFile (lFile);
+    if (labelFile.is_open()) {
+        getline(labelFile, line);
+
+        int i = 0;
+        string delimiter = ",";
+        while(getline(labelFile, line)) {
+            size_t pos = 0;
+            string token;
+            while ((pos = line.find(delimiter)) != string::npos) {
+                token = line.substr(0, pos);
+                train_Y[i] = atoi(token.c_str());
+                line.erase(0, pos + delimiter.length());
+                i++;
+            }
+            token = line.substr(0, pos);
+            train_Y[i] = atoi(token.c_str());
+            i++;
+        }
+        labelFile.close();
+    }
+    else {
+        cout << "Error in opening label file" << endl;
     }
 
     DOMP_TIMER_INIT();
-    // training data
-
-    //Inputs
-    // 6 x 6 matrix
-//    int train_X[36] = {
-//            1, 1, 1, 0, 0, 0,
-//            1, 0, 1, 0, 0, 0,
-//            1, 1, 1, 0, 0, 0,
-//            0, 0, 1, 1, 1, 0,
-//            0, 0, 1, 1, 0, 0,
-//            0, 0, 1, 1, 1, 0
-//    };
-//
-//    //Labels
-//    // 6 x 2 matrix
-//    int train_Y[12] = {
-//            1, 0,
-//            1, 0,
-//            1, 0,
-//            0, 1,
-//            0, 1,
-//            0, 1
-//    };
 
     // construct LogisticRegression
     LogisticRegression classifier(train_N, n_in, n_out);
 
     int offset, size;
 
+    DOMP_REGISTER(train_X, MPI_INT, train_N * n_in);
+    DOMP_REGISTER(train_Y, MPI_INT, train_N * n_out);
     DOMP_PARALLELIZE(train_N, &offset, &size);
 
-    DOMP_SHARED(train_X, offset * 6, size * 6);
-    DOMP_SHARED(train_Y, offset * 2, size * 2);
+    DOMP_EXCLUSIVE(train_X, offset * 6, size * 6);
+    DOMP_EXCLUSIVE(train_Y, offset * 2, size * 2);
     DOMP_SYNC;
 
     // train online
@@ -265,8 +217,8 @@ void test_lr(char *inFile, char *lFile) {
     if (DOMP_IS_MASTER) {
         // test data inputs
         int test_X[2][6] = {
-                {1, 0, 1, 0, 0, 0},
-                {0, 0, 1, 1, 1, 0}
+          {1, 0, 1, 0, 0, 0},
+          {0, 0, 1, 1, 1, 0}
         };
 
         //predicted labels

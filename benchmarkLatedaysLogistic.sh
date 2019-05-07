@@ -28,8 +28,6 @@ if [[ "$#" -ne 1 ]]; then
     exit 1
 fi
 
-inputs=('kmeans04.dat')
-clusterSize=(16)
 processorCount=(16 8 4 2 1)
 suffix=$1
 
@@ -40,14 +38,14 @@ echo "--------------------------------------------------------------------------
 # process for multiple nodes
 for (( pCount=14; pCount>=1; pCount-- )); do
     echo "Processing np $pCount"
-    command='./submitJob.py -a "build/logisticRegression -i data/logistic/input1M.txt -l data/logistic/data1M.txt" -s'"${suffix}_${pCount}_24 -n $pCount -p 24"
+    command='./submitJob.py -a "build/logisticRegression -i data/logistic/input1m.txt -l data/logistic/label1m.txt" -s'"${suffix}_${pCount}_24 -n $pCount -p 24"
     echo "Command is $command"
     eval ${command}
 done
 # Process for single node also
 for np in ${processorCount[@]}; do
     echo "Processing np $np"
-    command="./submitJob.py -a 'build/logisticRegression -i data/logistic/input1M.txt -l data/logistic/data1M.txt' -s ${suffix}_1_${np} -n 1 -p $np"
+    command="./submitJob.py -a 'build/logisticRegression -i data/logistic/input1m.txt -l data/logistic/label1m.txt' -s ${suffix}_1_${np} -n 1 -p $np"
     echo "Command is $command"
     eval ${command}
 done
