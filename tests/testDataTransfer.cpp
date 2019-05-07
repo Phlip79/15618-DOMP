@@ -51,7 +51,7 @@ void compute(int total_size, int iterations) {
 
 int main(int argc, char **argv) {
   DOMP_INIT(&argc, &argv);
-  int totalSize = 1000000;
+  int totalSize = 8648640;
   if (totalSize % DOMP_CLUSTER_SIZE != 0) {
     std::cout<<"Please run this program with 1000 as modulo of clusterSize"<<std::endl;
   } else {
